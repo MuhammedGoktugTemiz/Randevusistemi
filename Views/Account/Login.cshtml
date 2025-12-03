@@ -1,0 +1,46 @@
+@model RandevuWeb.Models.User
+@{
+    ViewData["Title"] = "Giriş";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Giriş - Randevu Sistemi</title>
+    <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<body class="login-page">
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <h1>🦷 Randevu Sistemi</h1>
+                <p>Lütfen giriş yapın</p>
+            </div>
+            <form method="post" class="login-form">
+                <div class="form-group">
+                    <label for="Username">Kullanıcı Adı</label>
+                    <input type="text" id="Username" name="Username" required autofocus />
+                </div>
+                <div class="form-group">
+                    <label for="Password">Şifre</label>
+                    <input type="password" id="Password" name="Password" required />
+                </div>
+                @if (!ViewData.ModelState.IsValid)
+                {
+                    <div class="alert alert-error">
+                        @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                        {
+                            <p>@error.ErrorMessage</p>
+                        }
+                    </div>
+                }
+                <button type="submit" class="btn btn-primary btn-block">Giriş Yap</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
+

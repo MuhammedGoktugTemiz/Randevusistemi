@@ -1,0 +1,112 @@
+@model List<RandevuWeb.Models.Patient>
+@{
+    ViewData["Title"] = "Hasta Yönetimi";
+}
+
+<div class="patients-shell">
+    @if (TempData["PatientSuccess"] is string createdPatient)
+    {
+        <div class="alert alert-success">
+            @createdPatient hastası başarıyla kaydedildi.
+        </div>
+    }
+    <header class="patient-hero">
+        <div>
+            <p class="hero-label">Hasta kütüphanesi</p>
+            <h1>Hasta Yönetimi</h1>
+            <p class="subtext">Takipte olduğunuz tüm hastalar tek ekranda</p>
+        </div>
+        <div class="hero-actions">
+            <a href="@Url.Action("Create", "Patient")" class="btn btn-primary">Yeni Hasta Ekle</a>
+        </div>
+    </header>
+
+    <section class="patient-stats">
+        <div class="metric-card">
+            <span>Toplam Hasta</span>
+            <strong>@ViewBag.TotalPatients</strong>
+            <small>Genel kayıt</small>
+        </div>
+        <div class="metric-card">
+            <span>Aktif</span>
+            <strong>@ViewBag.ActivePatients</strong>
+            <small>Kontrol altında</small>
+        </div>
+        <div class="metric-card">
+            <span>Son 30 gün</span>
+            <strong>@ViewBag.NewPatients</strong>
+            <small>Yeni eklenen</small>
+        </div>
+        <div class="metric-card">
+            <span>Toplam Randevu</span>
+            <strong>@ViewBag.TotalAppointments</strong>
+            <small>Hasta geçmişi</small>
+        </div>
+    </section>
+
+    <section class="patient-filters panel">
+        <form method="get" class="patient-search">
+            <input type="text" name="search" placeholder="İsim, telefon ya da TC ile ara" class="form-control" value="@Context.Request.Query["search"]" />
+            <select name="statusFilter" class="form-control">
+                <option value="">Tüm Durumlar</option>
+                <option value="Aktif" selected="@(Context.Request.Query["statusFilter"] == "Aktif")">Aktif</option>
+                <option value="Beklemede" selected="@(Context.Request.Query["statusFilter"] == "Beklemede")">Beklemede</option>
+                <option value="Pasif" selected="@(Context.Request.Query["statusFilter"] == "Pasif")">Pasif</option>
+            </select>
+            <button type="submit" class="btn btn-secondary">Filtrele</button>
+        </form>
+    </section>
+
+    <section class="patient-collection">
+        @if (Model.Any())
+        {
+            @foreach (var patient in Model)
+            {
+                <article class="patient-card-modern">
+                    <div class="patient-main">
+                        <div class="patient-avatar @(string.IsNullOrWhiteSpace(patient.PhotoUrl) ? "" : "with-photo")">
+                            @if (!string.IsNullOrWhiteSpace(patient.PhotoUrl))
+                            {
+                                <img src="@patient.PhotoUrl" alt="@patient.FullName" loading="lazy" />
+                            }
+                            else
+                            {
+                                @patient.FullName.Split(' ').Select(n => n[0]).Take(2).Aggregate("", (a, b) => a + b)
+                            }
+                        </div>
+                        <div>
+                            <h3>@patient.FullName</h3>
+                            <p class="subtext">@patient.Age yaş · @patient.Phone</p>
+                        </div>
+                    </div>
+                    <div class="patient-meta">
+                        <div>
+                            <span>Durum</span>
+                            <strong class="status-pill status-@patient.Status.ToLower()">@patient.Status</strong>
+                        </div>
+                        <div>
+                            <span>Son Ziyaret</span>
+                            <strong>@(string.IsNullOrEmpty(patient.LastVisit) ? "Kayıt yok" : patient.LastVisit)</strong>
+                        </div>
+                    </div>
+                    <div class="patient-actions">
+                        <a href="@Url.Action("Edit", "Patient", new { id = patient.Id })" class="btn btn-secondary btn-sm">Düzenle</a>
+                        <a href="@Url.Action("Appointments", "Patient", new { id = patient.Id })" class="btn btn-primary btn-sm">Randevu Bilgileri</a>
+                        <form method="post" action="@Url.Action("Delete", "Patient", new { id = patient.Id })" onsubmit="return confirm('Bu hastayı silmek istediğinizden emin misiniz?')">
+                            <button type="submit" class="btn btn-ghost btn-sm">Sil</button>
+                        </form>
+                    </div>
+                </article>
+            }
+        }
+        else
+        {
+            <div class="empty-state">
+                <p>Henüz hasta kaydı bulunmamaktadır.</p>
+                <a href="@Url.Action("Create", "Patient")" class="btn btn-primary">İlk Hastayı Ekle</a>
+            </div>
+        }
+    </section>
+</div>
+
+

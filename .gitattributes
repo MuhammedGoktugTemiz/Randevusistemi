@@ -1,0 +1,16 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Force LF line endings for these files
+*.cs text eol=lf
+*.cshtml text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.ps1 text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+
+# Deny commit for sensitive files (extra safety)
+appsettings.json linguist-generated=true
+Data/** linguist-generated=true
+

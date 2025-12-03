@@ -1,0 +1,877 @@
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Randevu Bilgilerim";
+    var doctor = ViewBag.Doctor as RandevuWeb.Models.Doctor;
+    var appointments = ViewBag.Appointments as List<RandevuWeb.Models.Appointment> ?? new List<RandevuWeb.Models.Appointment>();
+    var today = ViewBag.Today as DateTime? ?? DateTime.Today;
+    var selectedDate = ViewBag.SelectedDate as DateTime? ?? DateTime.Today;
+    var startOfWeek = ViewBag.StartOfWeek as DateTime? ?? DateTime.Today;
+    var endOfWeek = ViewBag.EndOfWeek as DateTime? ?? DateTime.Today;
+    var startOfMonth = ViewBag.StartOfMonth as DateTime? ?? DateTime.Today;
+    var endOfMonth = ViewBag.EndOfMonth as DateTime? ?? DateTime.Today;
+    var now = ViewBag.Now as DateTime? ?? DateTime.Now;
+    var view = ViewBag.View as string ?? "week";
+    
+    var weekDates = new List<DateTime>();
+    for (var date = startOfWeek; date < endOfWeek; date = date.AddDays(1))
+    {
+        weekDates.Add(date);
+    }
+    
+    var todayAppointments = appointments.Where(a => a.Start.Date == today.Date).OrderBy(a => a.Start).ToList();
+    var weekAppointments = appointments.Where(a => a.Start.Date >= startOfWeek && a.Start.Date < endOfWeek).ToList();
+    var monthAppointments = appointments.Where(a => a.Start.Date >= startOfMonth && a.Start.Date < endOfMonth).ToList();
+}
+
+<div class="doctor-appointments-shell">
+    <header class="doctor-appointments-header">
+        <div>
+            <h1>Randevu Bilgilerim</h1>
+            <p class="subtext">@doctor?.Name - @doctor?.Specialty</p>
+        </div>
+        <div class="header-actions">
+            <form method="post" action="@Url.Action("Logout", "DoctorAuth")" style="display: inline;">
+                <button type="submit" class="btn btn-secondary">Çıkış Yap</button>
+            </form>
+        </div>
+    </header>
+
+    <div class="calendar-navigation-bar">
+        <div class="nav-view-toggle">
+            <a href="@Url.Action("MyAppointments", "DoctorAuth", new { id = doctor?.Id, date = selectedDate.ToString("yyyy-MM-dd"), view = "week" })" 
+               class="view-toggle-btn @(view == "week" ? "active" : "")">
+                📅 Haftalık
+            </a>
+            <a href="@Url.Action("MyAppointments", "DoctorAuth", new { id = doctor?.Id, date = selectedDate.ToString("yyyy-MM-dd"), view = "month" })" 
+               class="view-toggle-btn @(view == "month" ? "active" : "")">
+                🗓️ Aylık
+            </a>
+        </div>
+        
+        <div class="nav-date-controls">
+            @if (view == "week")
+            {
+                <a href="@Url.Action("MyAppointments", "DoctorAuth", new { id = doctor?.Id, date = startOfWeek.AddDays(-7).ToString("yyyy-MM-dd"), view = "week" })" 
+                   class="nav-arrow-btn">◀ Önceki Hafta</a>
+                
+                <div class="current-period">
+                    <strong>@startOfWeek.ToString("dd MMMM", new System.Globalization.CultureInfo("tr-TR")) - @endOfWeek.AddDays(-1).ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("tr-TR"))</strong>
+                </div>
+                
+                <a href="@Url.Action("MyAppointments", "DoctorAuth", new { id = doctor?.Id, date = startOfWeek.AddDays(7).ToString("yyyy-MM-dd"), view = "week" })" 
+                   class="nav-arrow-btn">Sonraki Hafta ▶</a>
+            }
+            else
+            {
+                <a href="@Url.Action("MyAppointments", "DoctorAuth", new { id = doctor?.Id, date = startOfMonth.AddMonths(-1).ToString("yyyy-MM-dd"), view = "month" })" 
+                   class="nav-arrow-btn">◀ Önceki Ay</a>
+                
+                <div class="current-period">
+                    <strong>@startOfMonth.ToString("MMMM yyyy", new System.Globalization.CultureInfo("tr-TR"))</strong>
+                </div>
+                
+                <a href="@Url.Action("MyAppointments", "DoctorAuth", new { id = doctor?.Id, date = startOfMonth.AddMonths(1).ToString("yyyy-MM-dd"), view = "month" })" 
+                   class="nav-arrow-btn">Sonraki Ay ▶</a>
+            }
+            
+            <a href="@Url.Action("MyAppointments", "DoctorAuth", new { id = doctor?.Id, date = today.ToString("yyyy-MM-dd"), view = view })" 
+               class="nav-today-btn">Bugün</a>
+        </div>
+    </div>
+
+    <section class="appointments-stats-bar">
+        <div class="stat-item-small">
+            <span class="stat-label-small">Bugün</span>
+            <strong class="stat-value-small">@todayAppointments.Count</strong>
+        </div>
+        @if (view == "week")
+        {
+            <div class="stat-item-small">
+                <span class="stat-label-small">Bu Hafta</span>
+                <strong class="stat-value-small">@weekAppointments.Count</strong>
+            </div>
+        }
+        else
+        {
+            <div class="stat-item-small">
+                <span class="stat-label-small">Bu Ay</span>
+                <strong class="stat-value-small">@monthAppointments.Count</strong>
+            </div>
+        }
+        <div class="stat-item-small">
+            <span class="stat-label-small">Toplam</span>
+            <strong class="stat-value-small">@appointments.Count</strong>
+        </div>
+    </section>
+
+    <div class="calendar-view-container">
+        @if (view == "month")
+        {
+            <div class="calendar-month-view">
+                <div class="month-grid">
+                    @{
+                        var firstDayOfMonth = startOfMonth;
+                        var lastDayOfMonth = endOfMonth.AddDays(-1);
+                        var firstDayOfWeek = (int)firstDayOfMonth.DayOfWeek;
+                        if (firstDayOfWeek == 0) firstDayOfWeek = 7; // Monday = 1
+                        firstDayOfWeek--; // Make Monday = 0
+                        
+                        var daysInMonth = lastDayOfMonth.Day;
+                        var totalCells = firstDayOfWeek + daysInMonth;
+                        var weeksInMonth = (int)Math.Ceiling(totalCells / 7.0);
+                    }
+                    
+                    <div class="month-weekdays">
+                        <div class="month-weekday">Pzt</div>
+                        <div class="month-weekday">Sal</div>
+                        <div class="month-weekday">Çar</div>
+                        <div class="month-weekday">Per</div>
+                        <div class="month-weekday">Cum</div>
+                        <div class="month-weekday">Cmt</div>
+                        <div class="month-weekday">Paz</div>
+                    </div>
+                    
+                    <div class="month-days-grid">
+                        @for (int i = 0; i < firstDayOfWeek; i++)
+                        {
+                            <div class="month-day empty"></div>
+                        }
+                        
+                        @for (int day = 1; day <= daysInMonth; day++)
+                        {
+                            var currentDate = new DateTime(startOfMonth.Year, startOfMonth.Month, day);
+                            var isToday = currentDate.Date == today.Date;
+                            var dayAppointments = monthAppointments.Where(a => a.Start.Date == currentDate.Date).ToList();
+                            
+                            <div class="month-day @(isToday ? "today" : "")">
+                                <div class="month-day-number">@day</div>
+                                @if (dayAppointments.Any())
+                                {
+                                    <div class="month-day-appointments">
+                                        @foreach (var apt in dayAppointments.Take(3))
+                                        {
+                                            var statusClass = (apt.Status ?? string.Empty).Replace(" ", string.Empty).ToLowerInvariant();
+                                            <div class="month-appointment-dot @statusClass" 
+                                                 title="@apt.Start.ToString("HH:mm") - @apt.PatientName"></div>
+                                        }
+                                        @if (dayAppointments.Count > 3)
+                                        {
+                                            <div class="month-appointment-more">+@(dayAppointments.Count - 3)</div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+        @if (view == "week")
+        {
+            <div class="calendar-week-view">
+                <div class="calendar-time-column">
+                <div class="time-header"></div>
+                @for (int hour = 8; hour < 20; hour++)
+                {
+                    <div class="time-slot">
+                        <span class="time-label">@hour.ToString("00"):00</span>
+                    </div>
+                }
+            </div>
+            
+            <div class="calendar-days-container">
+                <div class="calendar-days-header">
+                    @foreach (var date in weekDates)
+                    {
+                        var isToday = date.Date == today.Date;
+                        var dayAppointments = weekAppointments.Where(a => a.Start.Date == date.Date).ToList();
+                        <div class="day-header @(isToday ? "today" : "")">
+                            <div class="day-name">@date.ToString("dddd", new System.Globalization.CultureInfo("tr-TR"))</div>
+                            <div class="day-number">@date.Day</div>
+                            <div class="day-count">@dayAppointments.Count</div>
+                        </div>
+                    }
+                </div>
+                
+                <div class="calendar-days-body">
+                    @foreach (var date in weekDates)
+                    {
+                        var dayAppointments = weekAppointments
+                            .Where(a => a.Start.Date == date.Date)
+                            .OrderBy(a => a.Start)
+                            .ToList();
+                        <div class="day-column">
+                            @for (int hour = 8; hour < 20; hour++)
+                            {
+                                <div class="time-cell" data-hour="@hour" data-date="@date.ToString("yyyy-MM-dd")"></div>
+                            }
+                            
+                            @foreach (var apt in dayAppointments)
+                            {
+                                var startHour = apt.Start.Hour;
+                                var startMinute = apt.Start.Minute;
+                                var duration = apt.DurationMinutes;
+                                var top = ((startHour - 8) * 60 + startMinute) * 0.8;
+                                var height = duration * 0.8;
+                                var statusClass = (apt.Status ?? string.Empty).Replace(" ", string.Empty).ToLowerInvariant();
+                                
+                                <div class="appointment-block @statusClass" 
+                                     style="top: @(top)px; height: @(height)px;"
+                                     data-start="@apt.Start.ToString("HH:mm")"
+                                     data-end="@apt.End.ToString("HH:mm")"
+                                     data-patient="@apt.PatientName"
+                                     data-procedure="@apt.Procedure">
+                                    <div class="appointment-time-small">@apt.Start.ToString("HH:mm")</div>
+                                    <div class="appointment-patient-small">@apt.PatientName</div>
+                                    @if (!string.IsNullOrWhiteSpace(apt.Procedure))
+                                    {
+                                        <div class="appointment-procedure-small">@apt.Procedure</div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+            </div>
+        }
+    </div>
+
+    <section class="today-appointments-list panel">
+        <div class="panel-head">
+            <div>
+                <h2>Bugünün Randevuları</h2>
+                <p class="subtext">@today.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("tr-TR"))</p>
+            </div>
+        </div>
+        <div class="appointments-timeline-list">
+            @if (todayAppointments.Any())
+            {
+                @foreach (var apt in todayAppointments)
+                {
+                    var statusClass = (apt.Status ?? string.Empty).Replace(" ", string.Empty).ToLowerInvariant();
+                    var procedureDetails = new List<object>();
+                    
+                    if (!string.IsNullOrWhiteSpace(apt.ProcedureDetails))
+                    {
+                        try
+                        {
+                            procedureDetails = JsonSerializer.Deserialize<List<object>>(apt.ProcedureDetails) ?? new List<object>();
+                        }
+                        catch { }
+                    }
+                    
+                    <article class="appointment-timeline-item">
+                        <div class="timeline-time">@apt.Start.ToString("HH:mm")</div>
+                        <div class="timeline-content">
+                            <div class="timeline-header">
+                                <strong>@apt.PatientName</strong>
+                                <span class="status-pill status-@statusClass">@apt.Status</span>
+                            </div>
+                            @if (procedureDetails.Any())
+                            {
+                                <div class="timeline-procedures">
+                                    @foreach (var detail in procedureDetails)
+                                    {
+                                        var detailDict = detail as JsonElement?;
+                                        if (detailDict.HasValue)
+                                        {
+                                            var detailObj = detailDict.Value;
+                                            var procedure = detailObj.TryGetProperty("procedure", out var proc) ? proc.GetString() : "";
+                                            var teeth = detailObj.TryGetProperty("teeth", out var teethProp) 
+                                                ? teethProp.EnumerateArray().Select(t => t.GetString()).Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t!).ToList()
+                                                : new List<string>();
+                                            
+                                            if (!string.IsNullOrWhiteSpace(procedure))
+                                            {
+                                                <div class="procedure-timeline">
+                                                    <span class="procedure-name">@procedure</span>
+                                                    @if (teeth.Any())
+                                                    {
+                                                        <div class="procedure-teeth-timeline">
+                                                            @foreach (var tooth in teeth)
+                                                            {
+                                                                <span class="tooth-badge-mini">@tooth</span>
+                                                            }
+                                                        </div>
+                                                    }
+                                                </div>
+                                            }
+                                        }
+                                    }
+                                </div>
+                            }
+                            else if (!string.IsNullOrWhiteSpace(apt.Procedure))
+                            {
+                                <div class="timeline-procedure-simple">@apt.Procedure</div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(apt.Notes))
+                            {
+                                <div class="timeline-notes">📝 @apt.Notes</div>
+                            }
+                            <div class="timeline-meta">
+                                <span>⏱️ @apt.DurationMinutes dakika</span>
+                            </div>
+                        </div>
+                    </article>
+                }
+            }
+            else
+            {
+                <div class="empty-state">
+                    <p>Bugün için randevu bulunmamaktadır.</p>
+                </div>
+            }
+        </div>
+    </section>
+</div>
+
+<style>
+/* Calendar Navigation Bar */
+.calendar-navigation-bar {
+    background: var(--bg-panel);
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    padding: 20px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.nav-view-toggle {
+    display: flex;
+    gap: 8px;
+    background: rgba(248, 250, 252, 0.8);
+    padding: 4px;
+    border-radius: 12px;
+}
+
+.view-toggle-btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--text);
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    background: transparent;
+}
+
+.view-toggle-btn:hover {
+    background: rgba(79, 70, 229, 0.1);
+    color: var(--brand);
+}
+
+.view-toggle-btn.active {
+    background: var(--brand);
+    color: white;
+    box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+}
+
+.nav-date-controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
+    justify-content: center;
+}
+
+.nav-arrow-btn {
+    padding: 10px 20px;
+    border-radius: 12px;
+    text-decoration: none;
+    color: var(--text);
+    font-weight: 600;
+    font-size: 14px;
+    background: rgba(248, 250, 252, 0.8);
+    border: 1px solid var(--border);
+    transition: all 0.2s ease;
+}
+
+.nav-arrow-btn:hover {
+    background: var(--brand);
+    color: white;
+    border-color: var(--brand);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+}
+
+.current-period {
+    padding: 12px 24px;
+    background: linear-gradient(135deg, var(--brand) 0%, #6366f1 100%);
+    color: white;
+    border-radius: 12px;
+    font-size: 16px;
+    min-width: 250px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+}
+
+.nav-today-btn {
+    padding: 10px 20px;
+    border-radius: 12px;
+    text-decoration: none;
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    background: var(--accent);
+    border: none;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
+}
+
+.nav-today-btn:hover {
+    background: #0284c7;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(14, 165, 233, 0.4);
+}
+
+/* Month View */
+.calendar-month-view {
+    padding: 24px;
+}
+
+.month-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.month-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.month-weekday {
+    padding: 12px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    background: rgba(248, 250, 252, 0.8);
+    border-radius: 8px;
+}
+
+.month-days-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+}
+
+.month-day {
+    min-height: 100px;
+    padding: 8px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.month-day:hover {
+    background: rgba(79, 70, 229, 0.05);
+    border-color: var(--brand);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.month-day.today {
+    background: rgba(79, 70, 229, 0.1);
+    border-color: var(--brand);
+    border-width: 2px;
+}
+
+.month-day.empty {
+    background: transparent;
+    border: none;
+    cursor: default;
+}
+
+.month-day.empty:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.month-day-number {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+}
+
+.month-day.today .month-day-number {
+    color: var(--brand);
+    font-size: 18px;
+}
+
+.month-day-appointments {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    margin-top: auto;
+}
+
+.month-appointment-dot {
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    margin-bottom: 2px;
+}
+
+.month-appointment-dot.status-tamamlandı,
+.month-appointment-dot.status-completed {
+    background: var(--success);
+}
+
+.month-appointment-dot.status-bekliyor,
+.month-appointment-dot.status-waiting,
+.month-appointment-dot.status-pending {
+    background: var(--warning);
+}
+
+.month-appointment-dot.status-iptal,
+.month-appointment-dot.status-cancelled {
+    background: var(--error);
+}
+
+.month-appointment-more {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 600;
+    margin-top: 4px;
+}
+
+@@media (max-width: 768px) {
+    .calendar-navigation-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .nav-date-controls {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .current-period {
+        min-width: auto;
+        width: 100%;
+    }
+    
+    .month-day {
+        min-height: 80px;
+    }
+}
+</style>
+
+<style>
+.doctor-appointments-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 24px;
+}
+
+.doctor-appointments-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 28px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 24px;
+    color: white;
+}
+
+.doctor-appointments-header h1 {
+    color: white;
+    margin-bottom: 4px;
+}
+
+.doctor-appointments-header .subtext {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.appointments-stats-bar {
+    display: flex;
+    gap: 16px;
+    padding: 16px 24px;
+    background: var(--bg-panel);
+    border-radius: 16px;
+    border: 1px solid var(--border);
+}
+
+.stat-item-small {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+}
+
+.stat-label-small {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-value-small {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.calendar-view-container {
+    background: var(--bg-panel);
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    overflow: hidden;
+}
+
+.calendar-week-view {
+    display: flex;
+    min-height: 600px;
+}
+
+.calendar-time-column {
+    width: 80px;
+    border-right: 1px solid var(--border);
+    background: rgba(248, 250, 252, 0.5);
+}
+
+.time-header {
+    height: 60px;
+    border-bottom: 1px solid var(--border);
+}
+
+.time-slot {
+    height: 60px;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+    display: flex;
+    align-items: flex-start;
+    padding: 4px 8px;
+}
+
+.time-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.calendar-days-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.calendar-days-header {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    border-bottom: 2px solid var(--border);
+    background: rgba(248, 250, 252, 0.8);
+}
+
+.day-header {
+    padding: 12px;
+    text-align: center;
+    border-right: 1px solid var(--border);
+}
+
+.day-header:last-child {
+    border-right: none;
+}
+
+.day-header.today {
+    background: rgba(79, 70, 229, 0.1);
+}
+
+.day-name {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.day-number {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.day-count {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.calendar-days-body {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    position: relative;
+    flex: 1;
+}
+
+.day-column {
+    position: relative;
+    border-right: 1px solid rgba(226, 232, 240, 0.5);
+}
+
+.day-column:last-child {
+    border-right: none;
+}
+
+.time-cell {
+    height: 60px;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.3);
+}
+
+.appointment-block {
+    position: absolute;
+    left: 4px;
+    right: 4px;
+    background: var(--brand);
+    color: white;
+    border-radius: 8px;
+    padding: 6px 8px;
+    font-size: 11px;
+    cursor: pointer;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    z-index: 10;
+}
+
+.appointment-block.completed {
+    background: #10b981;
+}
+
+.appointment-block.waiting {
+    background: #fbbf24;
+    color: #1f2937;
+}
+
+.appointment-block.cancelled {
+    background: #ef4444;
+}
+
+.appointment-time-small {
+    font-weight: 700;
+    font-size: 10px;
+    margin-bottom: 2px;
+}
+
+.appointment-patient-small {
+    font-weight: 600;
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.appointment-procedure-small {
+    font-size: 10px;
+    opacity: 0.9;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+}
+
+.appointments-timeline-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 20px;
+}
+
+.appointment-timeline-item {
+    display: flex;
+    gap: 16px;
+    padding: 16px;
+    background: var(--bg-panel);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+}
+
+.timeline-time {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--brand);
+    min-width: 60px;
+}
+
+.timeline-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.timeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.timeline-procedures {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.procedure-timeline {
+    padding: 8px 12px;
+    background: rgba(79, 70, 229, 0.05);
+    border-radius: 8px;
+    border-left: 3px solid var(--brand);
+}
+
+.procedure-name {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--brand);
+    display: block;
+    margin-bottom: 4px;
+}
+
+.procedure-teeth-timeline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.tooth-badge-mini {
+    padding: 2px 6px;
+    border-radius: 10px;
+    background: rgba(14, 165, 233, 0.1);
+    color: var(--accent);
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.timeline-procedure-simple {
+    font-size: 13px;
+    color: var(--text);
+}
+
+.timeline-notes {
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 8px;
+    background: rgba(248, 250, 252, 0.8);
+    border-radius: 8px;
+}
+
+.timeline-meta {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+</style>
+

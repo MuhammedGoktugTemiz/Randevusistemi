@@ -1,0 +1,109 @@
+@{
+    ViewData["Title"] = "Ayarlar";
+}
+
+<div class="settings-shell">
+    <header class="settings-hero">
+        <div>
+            <p class="hero-label">Kontrol Paneli</p>
+            <h1>Ayarlar</h1>
+            <p class="subtext">Klinik bilgileri, bildirimler ve görünüm tercihlerini yönetin</p>
+        </div>
+        <div class="hero-actions">
+            <button class="btn btn-secondary" type="button" onclick="alert('Değişiklikler kaydedildi (demo).')">Kaydet</button>
+        </div>
+    </header>
+
+    <section class="settings-grid">
+        <article class="settings-card">
+            <h2>Klinik Bilgileri</h2>
+            <p class="subtext">Hasta evraklarında gösterilecek temel bilgiler</p>
+            <div class="form-group">
+                <label>Klinik adı</label>
+                <input type="text" class="form-control" placeholder="Örn. Modern Diş Klinikleri" />
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Telefon</label>
+                    <input type="tel" class="form-control" placeholder="+90 555 000 00 00" />
+                </div>
+                <div class="form-group">
+                    <label>E-posta</label>
+                    <input type="email" class="form-control" placeholder="info@klinik.com" />
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Adres</label>
+                <textarea class="form-control" rows="2" placeholder="Klinik adresinizi girin"></textarea>
+            </div>
+        </article>
+
+        <article class="settings-card">
+            <h2>Bildirimler</h2>
+            <p class="subtext">Hatırlatmalar ve otomatik mesajlar</p>
+            <div class="toggle-row">
+                <div>
+                    <strong>SMS Randevu Hatırlatması</strong>
+                    <p>Randevudan 24 saat önce otomatik SMS gönder</p>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" checked>
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="toggle-row">
+                <div>
+                    <strong>E-posta Özetleri</strong>
+                    <p>Günlük randevu özetini mail olarak paylaş</p>
+                </div>
+                <label class="switch">
+                    <input type="checkbox">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            <div class="form-group">
+                <label>Hatırlatma süresi</label>
+                <select class="form-control">
+                    <option>12 saat önce</option>
+                    <option selected>24 saat önce</option>
+                    <option>48 saat önce</option>
+                </select>
+            </div>
+        </article>
+
+        <article class="settings-card">
+            <h2>Görünüm</h2>
+            <p class="subtext">Arayüz deneyimini kişiselleştirin</p>
+            <div class="theme-options">
+                <label class="theme-pill">
+                    <input type="radio" name="theme" checked>
+                    <span>Açık Tema</span>
+                </label>
+                <label class="theme-pill">
+                    <input type="radio" name="theme">
+                    <span>Koyu Tema</span>
+                </label>
+                <label class="theme-pill">
+                    <input type="radio" name="theme">
+                    <span>Otomatik</span>
+                </label>
+            </div>
+            <div class="form-group">
+                <label>Ana renk</label>
+                <input type="color" value="#4f46e5" class="color-picker" />
+            </div>
+        </article>
+
+        <article class="settings-card">
+            <h2>Veri Yönetimi</h2>
+            <p class="subtext">Yedekleme ve içe/dışa aktarma işlemleri</p>
+            <div class="data-actions">
+                <button type="button" class="btn btn-primary btn-sm" onclick="alert('JSON olarak dışa aktarıldı (demo).')">Verileri Dışa Aktar</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('importFile').click()">Veri İçe Aktar</button>
+                <input type="file" id="importFile" style="display:none" accept=".json,.csv" />
+            </div>
+            <p class="subtext">Yedeklemeleri düzenli almanız önerilir.</p>
+        </article>
+    </section>
+</div>
+

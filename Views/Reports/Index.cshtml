@@ -1,0 +1,317 @@
+@{
+    ViewData["Title"] = "Raporlar";
+    var appointments = ViewBag.Appointments as List<RandevuWeb.Models.Appointment> ?? new List<RandevuWeb.Models.Appointment>();
+    var period = ViewBag.Period as string ?? "daily";
+    var waitingAppointments = ViewBag.WaitingAppointments ?? 0;
+    var now = DateTime.Now;
+}
+
+<div class="reports-shell">
+    <header class="report-hero">
+        <div>
+            <p class="hero-label">İstatistikler ve Analiz</p>
+            <h1>Rapor Merkezi</h1>
+            <p class="subtext">Seçili döneme ait hasta ve randevu dağılımları</p>
+        </div>
+        <div class="report-period">
+            <a href="@Url.Action("Index", "Reports", new { period = "daily" })" class="period-btn @(period == "daily" ? "active" : "")">
+                <span>📅</span> Günlük
+            </a>
+            <a href="@Url.Action("Index", "Reports", new { period = "weekly" })" class="period-btn @(period == "weekly" ? "active" : "")">
+                <span>📆</span> Haftalık
+            </a>
+            <a href="@Url.Action("Index", "Reports", new { period = "monthly" })" class="period-btn @(period == "monthly" ? "active" : "")">
+                <span>🗓️</span> Aylık
+            </a>
+            <a href="@Url.Action("Index", "Reports", new { period = "yearly" })" class="period-btn @(period == "yearly" ? "active" : "")">
+                <span>📊</span> Yıllık
+            </a>
+        </div>
+    </header>
+
+    <section class="report-grid">
+        <div class="metric-card-enhanced">
+            <div class="metric-icon-large">📋</div>
+            <div class="metric-content-enhanced">
+                <span class="metric-label-enhanced">Toplam Randevu</span>
+                <strong class="metric-value-enhanced">@ViewBag.TotalAppointments</strong>
+                <small class="metric-subtext">Seçili dönem</small>
+            </div>
+        </div>
+        <div class="metric-card-enhanced success">
+            <div class="metric-icon-large">✓</div>
+            <div class="metric-content-enhanced">
+                <span class="metric-label-enhanced">Tamamlanan</span>
+                <strong class="metric-value-enhanced">@ViewBag.CompletedAppointments</strong>
+                <small class="metric-subtext">Kapalı işlemler</small>
+            </div>
+        </div>
+        <div class="metric-card-enhanced warning">
+            <div class="metric-icon-large">⏳</div>
+            <div class="metric-content-enhanced">
+                <span class="metric-label-enhanced">Bekleyen</span>
+                <strong class="metric-value-enhanced">@waitingAppointments</strong>
+                <small class="metric-subtext">Takipte</small>
+            </div>
+        </div>
+        <div class="metric-card-enhanced error">
+            <div class="metric-icon-large">✕</div>
+            <div class="metric-content-enhanced">
+                <span class="metric-label-enhanced">İptal</span>
+                <strong class="metric-value-enhanced">@ViewBag.CancelledAppointments</strong>
+                <small class="metric-subtext">Reddedilen</small>
+            </div>
+        </div>
+    </section>
+
+    <div class="reports-body">
+        <div class="report-chart panel">
+            <div class="panel-head">
+                <div>
+                    <h2>Hasta Grafiği</h2>
+                    <p class="subtext">@(period == "daily" ? "Günlük" : period == "weekly" ? "Haftalık" : period == "monthly" ? "Aylık" : "Yıllık") hasta sayısı trendi</p>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="patientsChart"></canvas>
+            </div>
+        </div>
+
+        <div class="report-chart panel">
+            <div class="panel-head">
+                <div>
+                    <h2>Randevu Durum Grafiği</h2>
+                    <p class="subtext">Randevu statülerinin dağılımı</p>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="statusChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="report-list panel">
+        <div class="panel-head">
+            <div>
+                <h2>Durum Özeti</h2>
+                <p class="subtext">Randevu statülerinin detaylı dökümü</p>
+            </div>
+        </div>
+        <ul class="status-list">
+            <li class="status-item completed">
+                <div class="status-info">
+                    <strong>Tamamlanan</strong>
+                    <span>Hedeflenen tedavi</span>
+                </div>
+                <span class="status-count">@ViewBag.CompletedAppointments</span>
+            </li>
+            <li class="status-item waiting">
+                <div class="status-info">
+                    <strong>Bekleyen</strong>
+                    <span>Planlanan operasyon</span>
+                </div>
+                <span class="status-count">@waitingAppointments</span>
+            </li>
+            <li class="status-item cancelled">
+                <div class="status-info">
+                    <strong>İptal</strong>
+                    <span>Çakışan ve iptal edilenler</span>
+                </div>
+                <span class="status-count">@ViewBag.CancelledAppointments</span>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var period = '@period';
+    var appointments = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(appointments));
+    
+    // Group appointments by period for patient chart
+    var patientData = groupPatientsByPeriod(appointments, period);
+    
+    // Draw patient chart
+    drawPatientChart(patientData, period);
+    
+    // Draw status chart
+    drawStatusChart();
+});
+
+function groupPatientsByPeriod(appointments, period) {
+    var grouped = {};
+    var now = new Date();
+    
+    appointments.forEach(function(apt) {
+        var startDate = apt.start || apt.Start;
+        var date = new Date(startDate);
+        var key = '';
+        
+        switch(period) {
+            case 'daily':
+                // Last 30 days
+                for (var i = 29; i >= 0; i--) {
+                    var d = new Date(now);
+                    d.setDate(d.getDate() - i);
+                    var dayKey = d.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' });
+                    if (!grouped[dayKey]) {
+                        grouped[dayKey] = new Set();
+                    }
+                    if (date.toDateString() === d.toDateString()) {
+                        grouped[dayKey].add(apt.patientId || apt.PatientId);
+                    }
+                }
+                break;
+            case 'weekly':
+                // Last 12 weeks
+                for (var i = 11; i >= 0; i--) {
+                    var weekStart = new Date(now);
+                    weekStart.setDate(now.getDate() - (now.getDay() - 1) - (i * 7));
+                    var weekKey = 'Hafta ' + weekStart.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' });
+                    if (!grouped[weekKey]) {
+                        grouped[weekKey] = new Set();
+                    }
+                    var aptWeekStart = new Date(date);
+                    aptWeekStart.setDate(date.getDate() - (date.getDay() - 1));
+                    if (weekStart.toDateString() === aptWeekStart.toDateString()) {
+                        grouped[weekKey].add(apt.patientId || apt.PatientId);
+                    }
+                }
+                break;
+            case 'monthly':
+                // Last 12 months
+                for (var i = 11; i >= 0; i--) {
+                    var monthDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                    var monthKey = monthDate.toLocaleDateString('tr-TR', { month: 'long', year: 'numeric' });
+                    if (!grouped[monthKey]) {
+                        grouped[monthKey] = new Set();
+                    }
+                    if (date.getMonth() === monthDate.getMonth() && date.getFullYear() === monthDate.getFullYear()) {
+                        grouped[monthKey].add(apt.patientId || apt.PatientId);
+                    }
+                }
+                break;
+            case 'yearly':
+                // Last 5 years
+                for (var i = 4; i >= 0; i--) {
+                    var year = now.getFullYear() - i;
+                    var yearKey = year.toString();
+                    if (!grouped[yearKey]) {
+                        grouped[yearKey] = new Set();
+                    }
+                    if (date.getFullYear() === year) {
+                        grouped[yearKey].add(apt.patientId || apt.PatientId);
+                    }
+                }
+                break;
+        }
+    });
+    
+    // Convert Sets to counts
+    var result = {};
+    for (var key in grouped) {
+        result[key] = grouped[key].size;
+    }
+    
+    return result;
+}
+
+function drawPatientChart(data, period) {
+    var ctx = document.getElementById('patientsChart').getContext('2d');
+    var labels = Object.keys(data).sort(function(a, b) {
+        // Sort by date
+        if (period === 'daily') {
+            var dateA = new Date(a.split('.')[1] + '/' + a.split('.')[0] + '/' + new Date().getFullYear());
+            var dateB = new Date(b.split('.')[1] + '/' + b.split('.')[0] + '/' + new Date().getFullYear());
+            return dateA - dateB;
+        }
+        return a.localeCompare(b);
+    });
+    var values = labels.map(function(key) { return data[key] || 0; });
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Hasta Sayısı',
+                data: values,
+                borderColor: 'rgb(79, 70, 229)',
+                backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                tension: 0.4,
+                fill: true,
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                pointBackgroundColor: 'rgb(79, 70, 229)',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+}
+
+function drawStatusChart() {
+    var ctx = document.getElementById('statusChart').getContext('2d');
+    
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Tamamlanan', 'Bekleyen', 'İptal'],
+            datasets: [{
+                data: [
+                    @ViewBag.CompletedAppointments,
+                    @waitingAppointments,
+                    @ViewBag.CancelledAppointments
+                ],
+                backgroundColor: [
+                    'rgb(16, 185, 129)',
+                    'rgb(251, 191, 36)',
+                    'rgb(239, 68, 68)'
+                ],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            var total = context.dataset.data.reduce(function(a, b) { return a + b; }, 0);
+                            var percentage = ((context.parsed / total) * 100).toFixed(1);
+                            return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+</script>

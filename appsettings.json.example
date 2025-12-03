@@ -1,0 +1,18 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*",
+  "DefaultUser": {
+    "Username": "admin",
+    "PasswordHash": "BURAYA_HASH_LENMIŞ_ŞİFRE_YAPIŞTIRIN"
+  },
+  "WhatsApp": {
+    "AccessToken": "YOUR_WHATSAPP_ACCESS_TOKEN",
+    "PhoneNumberId": "YOUR_PHONE_NUMBER_ID"
+  }
+}
+

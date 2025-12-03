@@ -1,0 +1,211 @@
+@{
+    ViewData["Title"] = "Takvim";
+    var currentDate = ViewBag.CurrentDate as DateTime? ?? DateTime.Now;
+    var appointments = ViewBag.Appointments as List<RandevuWeb.Models.Appointment> ?? new List<RandevuWeb.Models.Appointment>();
+    var selectedDay = ViewBag.SelectedDay as DateTime? ?? DateTime.Today;
+    var selectedDayAppointments = ViewBag.SelectedDayAppointments as List<RandevuWeb.Models.Appointment> 
+        ?? new List<RandevuWeb.Models.Appointment>();
+    var culture = new System.Globalization.CultureInfo("tr-TR");
+    
+    var firstDayOfMonth = new DateTime(currentDate.Year, currentDate.Month, 1);
+    var lastDayOfMonth = firstDayOfMonth.AddMonths(1).AddDays(-1);
+    var startDate = firstDayOfMonth.AddDays(-((int)firstDayOfMonth.DayOfWeek - 1));
+    if (firstDayOfMonth.DayOfWeek == DayOfWeek.Sunday) startDate = firstDayOfMonth.AddDays(-6);
+    
+    var days = new List<DateTime>();
+    for (var date = startDate; date <= startDate.AddDays(41); date = date.AddDays(1))
+    {
+        if (date.Month == currentDate.Month || days.Count < 42)
+        {
+            days.Add(date);
+        }
+    }
+
+    var monthAppointments = appointments
+        .Where(a => a.Start.Year == currentDate.Year && a.Start.Month == currentDate.Month)
+        .ToList();
+    var totalMonth = monthAppointments.Count;
+    var completedMonth = monthAppointments.Count(a => a.Status == "Tamamlandı");
+    var waitingMonth = monthAppointments.Count(a => a.Status == "Bekliyor");
+    var cancelledMonth = monthAppointments.Count(a => a.Status == "İptal");
+    var todayAppointments = selectedDayAppointments;
+}
+
+<div class="calendar-shell">
+    <header class="calendar-toolbar">
+        <div>
+            <p class="hero-label">Takvim görünümü</p>
+            <h1>@currentDate.ToString("MMMM yyyy", culture)</h1>
+            <p class="subtext">@firstDayOfMonth.ToString("dd MMM", culture) - @lastDayOfMonth.ToString("dd MMM", culture)</p>
+        </div>
+        <div class="calendar-navigation">
+            <button onclick="changeMonth(-1)" class="btn btn-secondary">◀ Önceki Ay</button>
+            <button onclick="changeMonth(1)" class="btn btn-primary">Sonraki Ay ▶</button>
+        </div>
+    </header>
+
+    <section class="calendar-metrics">
+        <div class="metric-card">
+            <span>Planlanan</span>
+            <strong>@totalMonth</strong>
+            <small>Bu ay</small>
+        </div>
+        <div class="metric-card">
+            <span>Tamamlanan</span>
+            <strong>@completedMonth</strong>
+            <small>Son durum</small>
+        </div>
+        <div class="metric-card">
+            <span>Bekleyen</span>
+            <strong>@waitingMonth</strong>
+            <small>Takipte</small>
+        </div>
+        <div class="metric-card">
+            <span>İptal</span>
+            <strong>@cancelledMonth</strong>
+            <small>Bu ay</small>
+        </div>
+    </section>
+
+    <div class="calendar-layout">
+        <div class="calendar-board panel">
+            <div class="calendar-weekdays">
+                <div>Pzt</div>
+                <div>Sal</div>
+                <div>Çar</div>
+                <div>Per</div>
+                <div>Cum</div>
+                <div>Cmt</div>
+                <div>Paz</div>
+            </div>
+            <div class="calendar-days">
+                @foreach (var day in days)
+                {
+                    var dayAppointments = appointments.Where(a => a.Start.Date == day.Date).ToList();
+                    var isToday = day.Date == DateTime.Today;
+                    var isCurrentMonth = day.Month == currentDate.Month;
+                    var isSelectedDay = day.Date == selectedDay.Date;
+                    
+                    <div class="calendar-day @(isToday ? "today" : "") @(!isCurrentMonth ? "other-month" : "") @(isSelectedDay ? "selected" : "")" 
+                         data-date="@day.ToString("yyyy-MM-dd")"
+                         onclick="selectDay('@day.ToString("yyyy-MM-dd")')">
+                        <div class="day-number">@day.Day</div>
+                        @if (dayAppointments.Any())
+                        {
+                            <div class="day-appointments">
+                                <span class="appointment-count">@dayAppointments.Count randevu</span>
+                                <div class="day-bar">
+                                    <span style="width: @Math.Min(dayAppointments.Count * 12, 100)%"></span>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
+        <aside class="calendar-side">
+            <div class="panel">
+                <div class="panel-head">
+                    <div>
+                        <h2>Seçilen Gün Randevuları</h2>
+                        <p class="subtext" id="selectedDayLabel">@selectedDay.ToString("dddd, dd MMMM", culture)</p>
+                    </div>
+                </div>
+                <div id="selectedDayList">
+                    @if (selectedDayAppointments.Any())
+                    {
+                        <div class="timeline">
+                            @foreach (var apt in selectedDayAppointments)
+                            {
+                                var statusClass = (apt.Status ?? string.Empty).Replace(" ", string.Empty).ToLowerInvariant();
+                                <div class="timeline-item">
+                                    <div class="time">@apt.Start.ToString("HH:mm")</div>
+                                    <div class="info">
+                                        <strong>@apt.PatientName</strong>
+                                        <span>@apt.DoctorName - @apt.Procedure</span>
+                                    </div>
+                                    <span class="status-pill status-@statusClass">@apt.Status</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="empty-state small">
+                            Bu gün için planlanan randevu yok.
+                        </div>
+                    }
+                </div>
+            </div>
+        </aside>
+    </div>
+</div>
+
+<script>
+var currentYear = @currentDate.Year;
+var currentMonth = @currentDate.Month;
+var selectedDay = '@selectedDay.ToString("yyyy-MM-dd")';
+
+function changeMonth(direction) {
+    var newDate = new Date(currentYear, currentMonth - 1 + direction, 1);
+    window.location.href = '@Url.Action("Index", "Calendar")?year=' + newDate.getFullYear() + '&month=' + (newDate.getMonth() + 1) + '&selectedDate=' + selectedDay;
+}
+
+function selectDay(dateStr) {
+    selectedDay = dateStr;
+    document.querySelectorAll('.calendar-day.selected').forEach(function(el) {
+        el.classList.remove('selected');
+    });
+    var clickedDay = document.querySelector('.calendar-day[data-date="' + dateStr + '"]');
+    if (clickedDay) {
+        clickedDay.classList.add('selected');
+    }
+    updateSelectedDayPanel(dateStr);
+}
+
+function updateSelectedDayPanel(dateStr) {
+    fetch('@Url.Action("GetAppointmentsForDate", "Calendar")?date=' + dateStr)
+        .then(response => response.json())
+        .then(data => {
+            var date = new Date(dateStr);
+            var label = document.getElementById('selectedDayLabel');
+            if (label) {
+                label.textContent = date.toLocaleDateString('tr-TR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            }
+            var container = document.getElementById('selectedDayList');
+            if (!container) return;
+            if (!data || data.length === 0) {
+                container.innerHTML = '<div class="empty-state small">Bu gün için planlanan randevu yok.</div>';
+                return;
+            }
+            var items = data.map(function(apt) {
+                var startDate = new Date(apt.start || apt.Start);
+                var time = startDate.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+                var patient = apt.patientName || apt.PatientName || '';
+                var doctor = apt.doctorName || apt.DoctorName || '';
+                var procedure = apt.procedure || apt.Procedure || '';
+                var status = (apt.status || apt.Status || '').toLowerCase().replace(/\s+/g, '');
+                return `
+                    <div class="timeline-item">
+                        <div class="time">${time}</div>
+                        <div class="info">
+                            <strong>${patient}</strong>
+                            <span>${doctor} - ${procedure}</span>
+                        </div>
+                        <span class="status-pill status-${status}">${apt.status || apt.Status}</span>
+                    </div>
+                `;
+            }).join('');
+            container.innerHTML = '<div class="timeline">' + items + '</div>';
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            var container = document.getElementById('selectedDayList');
+            if (container) {
+                container.innerHTML = '<div class="empty-state small">Randevular yüklenirken bir hata oluştu.</div>';
+            }
+        });
+}
+</script>
+

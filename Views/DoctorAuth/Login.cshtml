@@ -1,0 +1,49 @@
+@model RandevuWeb.Controllers.DoctorLoginModel
+@{
+    ViewData["Title"] = "Doktor Girişi";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Doktor Girişi - Randevu Sistemi</title>
+    <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<body class="login-page">
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <h1>👨‍⚕️ Doktor Girişi</h1>
+                <p>Randevu bilgilerinize erişmek için giriş yapın</p>
+            </div>
+            <form method="post" class="login-form">
+                <div class="form-group">
+                    <label for="Username">Kullanıcı Adı</label>
+                    <input type="text" id="Username" name="Username" required autofocus placeholder="Kullanıcı adınızı girin" />
+                </div>
+                <div class="form-group">
+                    <label for="Password">Şifre</label>
+                    <input type="password" id="Password" name="Password" required placeholder="Şifrenizi girin" />
+                </div>
+                @if (!ViewData.ModelState.IsValid)
+                {
+                    <div class="alert alert-error">
+                        @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                        {
+                            <p>@error.ErrorMessage</p>
+                        }
+                    </div>
+                }
+                <button type="submit" class="btn btn-primary btn-block">Giriş Yap</button>
+                <div style="text-align: center; margin-top: 16px;">
+                    <a href="@Url.Action("Login", "Account")" style="color: var(--text-muted); font-size: 14px;">Admin Girişi</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
+
