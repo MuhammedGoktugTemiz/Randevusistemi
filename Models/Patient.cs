@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace RandevuWeb.Models;
 
 public class Patient
@@ -22,6 +24,7 @@ public class Patient
     public string ProcedureDetails { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; } = DateTime.Now;
 
+    [NotMapped]
     public int Age
     {
         get

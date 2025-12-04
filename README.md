@@ -18,8 +18,9 @@ Diş hekimi randevu yönetim sistemi. ASP.NET Core MVC ile geliştirilmiş, JSON
 
 - .NET 8.0
 - ASP.NET Core MVC
-- JSON dosya tabanlı veri depolama
+- SQLite (Entity Framework Core)
 - Cookie-based authentication
+- BCrypt şifre hash'leme
 
 ## Kurulum
 
@@ -42,12 +43,11 @@ Giriş bilgileri `appsettings.json` dosyasında yapılandırılır. İlk kurulum
 
 ## Veri Depolama
 
-Tüm veriler `Data/` klasöründe JSON dosyalarında saklanır:
-- `patients.json` - Hasta verileri
-- `doctors.json` - Doktor verileri
-- `appointments.json` - Randevu verileri
+Tüm veriler **SQLite** veritabanında saklanır:
+- `Data/randevu.db` - SQLite veritabanı dosyası
+- Entity Framework Core ile yönetilir
 
-**ÖNEMLİ:** `Data/` klasörü hassas bilgiler içerir ve Git'e commit edilmemelidir!
+**ÖNEMLİ:** `Data/randevu.db` dosyası hassas bilgiler içerir ve Git'e commit edilmemelidir!
 
 ## Proje Yapısı
 

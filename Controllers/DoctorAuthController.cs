@@ -132,7 +132,7 @@ public class DoctorAuthController : Controller
     public async Task<IActionResult> Logout()
     {
         await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-        return RedirectToAction("Login", "DoctorAuth");
+        return RedirectToAction("LoginSelection", "Home");
     }
 
     [HttpGet]

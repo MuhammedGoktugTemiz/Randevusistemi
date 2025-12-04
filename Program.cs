@@ -1,7 +1,10 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.EntityFrameworkCore;
+using RandevuWeb.Data;
 using RandevuWeb.Services;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,6 +15,32 @@ builder.Services.AddControllersWithViews()
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.WriteIndented = true;
     });
+
+// Database - Try multiple connection strings if first fails
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrEmpty(connectionString))
+{
+    // Try SQLEXPRESS instance
+    connectionString = builder.Configuration.GetConnectionString("DefaultConnectionSQLEXPRESS");
+}
+if (string.IsNullOrEmpty(connectionString))
+{
+    // Try LocalDB as fallback
+    connectionString = builder.Configuration.GetConnectionString("DefaultConnectionLocalDB");
+}
+if (string.IsNullOrEmpty(connectionString))
+{
+    throw new InvalidOperationException("No valid connection string found. Please check appsettings.json");
+}
+
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlServer(connectionString, sqlOptions =>
+    {
+        sqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 3,
+            maxRetryDelay: TimeSpan.FromSeconds(5),
+            errorNumbersToAdd: null);
+    }));
 
 // Authentication
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -28,7 +57,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     });
 
 // Services
-builder.Services.AddSingleton<IDataService, JsonDataService>();
+builder.Services.AddScoped<IDataService, SqlDataService>();
 builder.Services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
 builder.Services.AddMemoryCache(); // Rate limiting için
 builder.Services.AddHttpClient<IWhatsAppService, WhatsAppService>();
@@ -36,6 +65,13 @@ builder.Services.AddScoped<IWhatsAppService, WhatsAppService>();
 builder.Services.AddHostedService<WhatsAppReminderService>();
 
 var app = builder.Build();
+
+// Base path ayarı (alt klasör deployment için)
+var basePath = builder.Configuration["BasePath"] ?? Environment.GetEnvironmentVariable("ASPNETCORE_BASEPATH");
+if (!string.IsNullOrEmpty(basePath))
+{
+    app.UsePathBase(basePath);
+}
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -56,11 +92,80 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-// Initialize data directory
-var dataDir = Path.Combine(app.Environment.ContentRootPath, "Data");
-if (!Directory.Exists(dataDir))
+// Initialize database
+using (var scope = app.Services.CreateScope())
 {
-    Directory.CreateDirectory(dataDir);
+    var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
+    
+    try
+    {
+        var context = services.GetRequiredService<ApplicationDbContext>();
+        
+        // Test connection first
+        logger.LogInformation("SQL Server bağlantısı test ediliyor...");
+        var canConnect = false;
+        try
+        {
+            canConnect = context.Database.CanConnect();
+            logger.LogInformation("SQL Server bağlantısı başarılı.");
+        }
+        catch (Exception connEx)
+        {
+            logger.LogError(connEx, "SQL Server'a bağlanılamıyor! Lütfen şunları kontrol edin:");
+            logger.LogError("1. SQL Server servisinin çalıştığından emin olun");
+            logger.LogError("2. Connection string'in doğru olduğundan emin olun (appsettings.json)");
+            logger.LogError("3. SQL Server instance adını kontrol edin (localhost\\SQLEXPRESS gibi)");
+            logger.LogError("4. SQL Server Authentication'ın aktif olduğundan emin olun");
+            logger.LogError("Bağlantı string'i: {ConnectionString}", connectionString?.Replace("Password=.*;", "Password=***;"));
+            throw;
+        }
+        
+        // Check for pending migrations
+        var pendingMigrations = new List<string>();
+        try
+        {
+            pendingMigrations = context.Database.GetPendingMigrations().ToList();
+        }
+        catch
+        {
+            // If migrations table doesn't exist, we'll use EnsureCreated
+            logger.LogInformation("Migration tablosu bulunamadı, veritabanı oluşturulacak...");
+        }
+        
+        if (pendingMigrations.Any())
+        {
+            logger.LogInformation("{Count} adet bekleyen migration uygulanıyor...", pendingMigrations.Count);
+            context.Database.Migrate();
+            logger.LogInformation("Migration'lar başarıyla uygulandı.");
+        }
+        else if (!canConnect)
+        {
+            // Database doesn't exist, create it with EnsureCreated
+            logger.LogInformation("Veritabanı oluşturuluyor...");
+            context.Database.EnsureCreated();
+            logger.LogInformation("Veritabanı başarıyla oluşturuldu.");
+        }
+        else
+        {
+            logger.LogInformation("Veritabanı güncel.");
+        }
+        
+        // Eğer veritabanı boşsa ve JSON dosyaları varsa, verileri migrate et
+        if (!context.Doctors.Any() && !context.Patients.Any() && !context.Appointments.Any())
+        {
+            logger.LogInformation("JSON dosyalarından veri taşınıyor...");
+            var migrator = new MigrateJsonToSql(context, app.Services.GetRequiredService<IWebHostEnvironment>());
+            await migrator.MigrateAsync();
+            logger.LogInformation("Veri taşıma tamamlandı.");
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Veritabanı başlatılırken hata oluştu: {Message}", ex.Message);
+        logger.LogError("Stack trace: {StackTrace}", ex.StackTrace);
+        throw; // Re-throw to prevent app from starting with broken database
+    }
 }
 
 app.Run();

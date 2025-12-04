@@ -1,0 +1,179 @@
+@{
+    ViewData["Title"] = "Giriş Seçimi";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Giriş Seçimi - Randevu Sistemi</title>
+    <link rel="stylesheet" href="~/css/site.css" />
+    <style>
+        .login-selection-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        .login-selection-card {
+            background: white;
+            border-radius: 20px;
+            padding: 60px 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .login-selection-header {
+            margin-bottom: 40px;
+        }
+
+        .login-selection-header h1 {
+            font-size: 2.5rem;
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+
+        .login-selection-header p {
+            color: #666;
+            font-size: 1.1rem;
+            margin: 0;
+        }
+
+        .login-options {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .login-option {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 25px 30px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            text-decoration: none;
+            color: #333;
+            font-size: 1.2rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            background: white;
+            cursor: pointer;
+        }
+
+        .login-option:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .login-option.admin {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .login-option.admin:hover {
+            background: linear-gradient(135deg, #5568d3 0%, #653a8f 100%);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .login-option.doctor {
+            border-color: #4caf50;
+            background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+            color: white;
+        }
+
+        .login-option.doctor:hover {
+            background: linear-gradient(135deg, #45a049 0%, #3d8b40 100%);
+            box-shadow: 0 5px 20px rgba(76, 175, 80, 0.4);
+        }
+
+        .login-option-icon {
+            font-size: 2rem;
+            margin-right: 15px;
+        }
+
+        .login-option-content {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            text-align: left;
+        }
+
+        .login-option-title {
+            font-size: 1.3rem;
+            margin-bottom: 5px;
+        }
+
+        .login-option-desc {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            font-weight: normal;
+        }
+
+        .logo-mark {
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        @@media (max-width: 600px) {
+            .login-selection-card {
+                padding: 40px 25px;
+            }
+
+            .login-selection-header h1 {
+                font-size: 2rem;
+            }
+
+            .login-option {
+                padding: 20px;
+                font-size: 1rem;
+            }
+
+            .login-option-icon {
+                font-size: 1.5rem;
+                margin-right: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-selection-container">
+        <div class="login-selection-card">
+            <div class="login-selection-header">
+                <div class="logo-mark">🦷</div>
+                <h1>Randevu Sistemi</h1>
+                <p>Lütfen giriş türünüzü seçin</p>
+            </div>
+
+            <div class="login-options">
+                <a href="@Url.Action("Login", "Account")" class="login-option admin">
+                    <span class="login-option-icon">👤</span>
+                    <div class="login-option-content">
+                        <span class="login-option-title">Admin Girişi</span>
+                        <span class="login-option-desc">Yönetim paneli erişimi</span>
+                    </div>
+                </a>
+
+                <a href="@Url.Action("Login", "DoctorAuth")" class="login-option doctor">
+                    <span class="login-option-icon">👨‍⚕️</span>
+                    <div class="login-option-content">
+                        <span class="login-option-title">Doktor Girişi</span>
+                        <span class="login-option-desc">Doktor randevu görünümü</span>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

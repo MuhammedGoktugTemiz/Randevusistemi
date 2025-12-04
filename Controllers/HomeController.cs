@@ -17,6 +17,12 @@ public class HomeController : Controller
     [AllowAnonymous]
     public IActionResult Index(DateTime? selectedDate)
     {
+        // Eğer kullanıcı giriş yapmamışsa, giriş seçim sayfasını göster
+        if (!User.Identity?.IsAuthenticated ?? true)
+        {
+            return RedirectToAction("LoginSelection");
+        }
+
         var date = selectedDate ?? DateTime.Today;
         var appointments = _dataService.GetAppointments();
         var doctors = _dataService.GetDoctors();
@@ -38,6 +44,18 @@ public class HomeController : Controller
         ViewBag.Doctors = doctors;
         ViewBag.Appointments = appointments;
         ViewBag.Patients = patients;
+
+        return View();
+    }
+
+    [AllowAnonymous]
+    public IActionResult LoginSelection()
+    {
+        // Eğer kullanıcı zaten giriş yapmışsa dashboard'a yönlendir
+        if (User.Identity?.IsAuthenticated == true)
+        {
+            return RedirectToAction("Index");
+        }
 
         return View();
     }

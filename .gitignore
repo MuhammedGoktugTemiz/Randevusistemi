@@ -42,14 +42,28 @@ artifacts/
 *.sln.iml
 
 # Data files - HASSAS BİLGİLER İÇERİR, GİT'E EKLEMEYİN!
-Data/
-Data/**/*.json
+Data/*.json
+Data/*.db
+Data/*.db-shm
+Data/*.db-wal
 
 # User secrets ve hassas konfigürasyon dosyaları
 appsettings.Development.json
 appsettings.Production.json
 appsettings.json
 !appsettings.json.example
+
+# Development Scripts - CANLIYA ALINMAMALI
+# Not: git-commit.ps1 script'i commit edilebilir
+test-sql-connection.ps1
+create-migration.ps1
+update-database.ps1
+fix-sql-authentication.ps1
+enable-sa-login.sql
+
+# Documentation (opsiyonel - production'a gerekli değil)
+SQL_MIGRATION.md
+PRODUCTION_DEPLOYMENT.md
 
 # Bin ve obj klasörleri zaten ignore ediliyor ama tekrar ekliyoruz
 bin/
@@ -58,4 +72,11 @@ obj/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Gradle (eğer varsa)
+.gradle/
+
+# Other IDE files
+.vscode/
+.cursor/
 
