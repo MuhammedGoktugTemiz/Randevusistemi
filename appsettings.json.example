@@ -1,0 +1,21 @@
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=localhost\\MSSQLSERVER2022;Database=YOUR_DATABASE_NAME;User Id=YOUR_USERNAME;Password=YOUR_PASSWORD;TrustServerCertificate=True;Connection Timeout=30;MultipleActiveResultSets=True;"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*",
+  "DefaultUser": {
+    "Username": "admin",
+    "Password": "Admin123.*"
+  },
+  "WhatsApp": {
+    "AccessToken": "YOUR_WHATSAPP_ACCESS_TOKEN",
+    "PhoneNumberId": "YOUR_PHONE_NUMBER_ID"
+  }
+}
+

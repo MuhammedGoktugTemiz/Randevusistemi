@@ -1,0 +1,38 @@
+# Bu dosya production deployment sırasında hangi dosyaların kopyalanmaması gerektiğini belirtir
+# Kullanım: Deployment tool'ları bu dosyayı okuyabilir
+
+# Development Scripts
+*.ps1
+enable-sa-login.sql
+
+# Development Documentation
+SQL_MIGRATION.md
+PRODUCTION_DEPLOYMENT.md
+README.md
+
+# Build Outputs (zaten publish klasöründe olmayacak)
+bin/
+obj/
+.vs/
+
+# Development Configuration
+appsettings.Development.json
+
+# Data Files (hassas bilgiler)
+Data/*.json
+Data/*.db
+Data/*.db-shm
+Data/*.db-wal
+
+# IDE Files
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.sln.iml
+
+# OS Files
+.DS_Store
+Thumbs.db
+

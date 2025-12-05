@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <location path="." inheritInChildApplications="false">
+    <system.webServer>
+      <handlers>
+        <remove name="aspNetCore" />
+        <add name="aspNetCore" path="*" verb="*" modules="AspNetCoreModule" resourceType="Unspecified" />
+      </handlers>
+      <aspNetCore processPath=".\RandevuWeb.exe" 
+                  arguments="" 
+                  stdoutLogEnabled="true" 
+                  stdoutLogFile=".\logs\stdout" 
+                  stdoutLogMaxFiles="10"
+                  stdoutLogFileSizeLimitKB="1024"
+                  hostingModel="inprocess"
+                  forwardWindowsAuthToken="false">
+        <environmentVariables>
+          <environmentVariable name="ASPNETCORE_ENVIRONMENT" value="Production" />
+          <environmentVariable name="ASPNETCORE_DETAILEDERRORS" value="true" />
+          <environmentVariable name="ASPNETCORE_PATH" value="." />
+        </environmentVariables>
+      </aspNetCore>
+      <httpErrors errorMode="Detailed" />
+      <staticContent>
+        <remove fileExtension=".json" />
+        <mimeMap fileExtension=".json" mimeType="application/json" />
+      </staticContent>
+      <directoryBrowse enabled="false" />
+    </system.webServer>
+  </location>
+</configuration>
+

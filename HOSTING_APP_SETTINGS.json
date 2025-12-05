@@ -1,0 +1,22 @@
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=localhost\\MSSQLSERVER2022;Database=dtomeral_randevu_sistemi;User Id=dtomeral_randevu4;Password=13579Mami.*;TrustServerCertificate=True;Connection Timeout=30;MultipleActiveResultSets=True;"
+  },
+  "Logging": {
+    "LogLevel": {
+      "Default": "Warning",
+      "Microsoft.AspNetCore": "Warning",
+      "Microsoft.EntityFrameworkCore": "Error"
+    }
+  },
+  "AllowedHosts": "*",
+  "DefaultUser": {
+    "Username": "admin",
+    "Password": "Admin123.*"
+  },
+  "WhatsApp": {
+    "AccessToken": "YOUR_WHATSAPP_ACCESS_TOKEN",
+    "PhoneNumberId": "YOUR_PHONE_NUMBER_ID"
+  }
+}
+
