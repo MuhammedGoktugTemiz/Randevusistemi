@@ -164,7 +164,16 @@ using (var scope = app.Services.CreateScope())
     {
         logger.LogError(ex, "Veritabanı başlatılırken hata oluştu: {Message}", ex.Message);
         logger.LogError("Stack trace: {StackTrace}", ex.StackTrace);
-        throw; // Re-throw to prevent app from starting with broken database
+        
+        // Production'da uygulamanın başlamasına izin ver (veritabanı sonradan düzeltilebilir)
+        if (app.Environment.IsDevelopment())
+        {
+            throw; // Development'ta hata fırlat
+        }
+        else
+        {
+            logger.LogWarning("Production modunda uygulama veritabanı hatası ile başlatılıyor. Lütfen veritabanı bağlantısını kontrol edin.");
+        }
     }
 }
 
