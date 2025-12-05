@@ -68,6 +68,7 @@ PRODUCTION_DEPLOYMENT.md
 # Bin ve obj klasörleri zaten ignore ediliyor ama tekrar ekliyoruz
 bin/
 obj/
+publish/
 
 # OS files
 .DS_Store
