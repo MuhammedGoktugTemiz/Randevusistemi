@@ -20,6 +20,11 @@ builder.Services.AddControllersWithViews()
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 if (string.IsNullOrEmpty(connectionString))
 {
+    // Try hosting connection string
+    connectionString = builder.Configuration.GetConnectionString("DefaultConnectionHosting");
+}
+if (string.IsNullOrEmpty(connectionString))
+{
     // Try SQLEXPRESS instance
     connectionString = builder.Configuration.GetConnectionString("DefaultConnectionSQLEXPRESS");
 }
@@ -30,7 +35,13 @@ if (string.IsNullOrEmpty(connectionString))
 }
 if (string.IsNullOrEmpty(connectionString))
 {
-    throw new InvalidOperationException("No valid connection string found. Please check appsettings.json");
+    if (builder.Environment.IsDevelopment())
+    {
+        throw new InvalidOperationException("No valid connection string found. Please check appsettings.json");
+    }
+    // Production'da uygulama başlasın ama veritabanı işlemleri çalışmayacak
+    // Logger henüz hazır değil, bu yüzden geçici bir connection string kullanıyoruz
+    connectionString = "Server=.;Database=temp;Trusted_Connection=True;";
 }
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
