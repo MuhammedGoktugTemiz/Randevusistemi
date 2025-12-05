@@ -1,0 +1,315 @@
+@model RandevuWeb.Models.Appointment
+@{
+    ViewData["Title"] = "Randevu Ekle";
+    var patients = ViewBag.Patients as List<RandevuWeb.Models.Patient> ?? new List<RandevuWeb.Models.Patient>();
+    var doctors = ViewBag.Doctors as List<RandevuWeb.Models.Doctor> ?? new List<RandevuWeb.Models.Doctor>();
+    var nextSlot = DateTime.Now.Date.AddHours(9).ToString("HH:mm");
+}
+
+<div class="appointment-shell">
+    <header class="appointment-hero">
+        <div>
+            <p class="hero-label">Yeni randevu</p>
+            <h1>Dijital planlama</h1>
+            <p class="subtext">Bir sonraki uygun slot: @nextSlot</p>
+        </div>
+        <div class="hero-actions">
+            <a href="@Url.Action("Index", "Calendar")" class="btn btn-secondary">Takvimi Gör</a>
+            <a href="@Url.Action("Index", "Patient")" class="btn btn-ghost">Hasta listesi</a>
+        </div>
+    </header>
+
+    <form method="post" class="appointment-layout">
+        <section class="appointment-card panel">
+            <div class="panel-head">
+                <div>
+                    <h2>Hasta & Doktor Bilgileri</h2>
+                    <p class="subtext">Zorunlu alanlar * ile işaretlenmiştir</p>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label asp-for="PatientId">Hasta *</label>
+                    <select asp-for="PatientId" class="form-control" required>
+                        <option value="">Hasta Seçin</option>
+                        @foreach (var patient in patients)
+                        {
+                            <option value="@patient.Id">@patient.FullName</option>
+                        }
+                    </select>
+                    <span asp-validation-for="PatientId" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="DoctorId">Doktor *</label>
+                    <select asp-for="DoctorId" class="form-control" required>
+                        <option value="">Doktor Seçin</option>
+                        @foreach (var doctor in doctors)
+                        {
+                            <option value="@doctor.Id">@doctor.Name</option>
+                        }
+                    </select>
+                    <span asp-validation-for="DoctorId" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label asp-for="Start">Tarih *</label>
+                    <input type="date" asp-for="Start" class="form-control" required value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                    <span asp-validation-for="Start" class="text-danger"></span>
+                </div>
+
+                <div class="form-group">
+                    <label>Saat *</label>
+                    <select id="timeSelect" name="timeSelect" class="form-control" required>
+                        <option value="">Saat Seçin</option>
+                        @for (int hour = 8; hour < 22; hour++)
+                        {
+                            var slotHour = hour.ToString("00");
+                            <option value="@slotHour:00">@slotHour:00</option>
+                            <option value="@slotHour:30">@slotHour:30</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label asp-for="DurationMinutes">Süre (dakika) *</label>
+                    <select asp-for="DurationMinutes" class="form-control" required>
+                        <option value="30">30 dakika</option>
+                        <option value="45">45 dakika</option>
+                        <option value="60" selected>60 dakika</option>
+                        <option value="90">90 dakika</option>
+                        <option value="120">120 dakika</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Notes">Notlar</label>
+                <textarea asp-for="Notes" class="form-control" rows="4" placeholder="Operasyon notları, hastanın ihtiyaçları vb."></textarea>
+            </div>
+
+            @if (!ViewData.ModelState.IsValid)
+            {
+                <div class="alert alert-error">
+                    @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                    {
+                        <p>@error.ErrorMessage</p>
+                    }
+                </div>
+            }
+        </section>
+
+        <section class="dental-lab panel">
+            <div class="panel-head">
+                <div>
+                    <h2>Diş İşlemi</h2>
+                    <p class="subtext">Gerçek diş şeması üzerinden seçim yapın</p>
+                </div>
+            </div>
+
+            <div class="dental-display">
+                <div id="dentalChart" class="dental-chart-grid"></div>
+                <div class="dental-meta">
+                    <div class="dental-actions-top">
+                        <button type="button" class="btn btn-secondary" id="selectAllTeethBtn">Tümünü Seç</button>
+                    </div>
+                    <div class="form-group">
+                        <label asp-for="ToothNumbers">Seçili Dişler</label>
+                        <input type="text" asp-for="ToothNumbers" class="form-control" id="toothNumbers" readonly placeholder="Henüz seçim yapılmadı" />
+                    </div>
+                    <div class="form-group">
+                        <label>İşlem Türü</label>
+                        <select class="form-control" id="procedureSelect" disabled>
+                            <option value="">İşlem Seçin</option>
+                            <option value="Diş Temizliği">Diş Temizliği</option>
+                            <option value="Dolgu">Dolgu</option>
+                            <option value="Kanal Tedavisi">Kanal Tedavisi</option>
+                            <option value="Diş Çekimi">Diş Çekimi</option>
+                            <option value="İmplant">İmplant</option>
+                            <option value="Koruyucu Tedavi">Koruyucu Tedavi</option>
+                            <option value="Ortodonti">Ortodonti</option>
+                            <option value="Protez">Protez</option>
+                        </select>
+                    </div>
+                    <div class="procedure-groups">
+                        <div class="procedure-groups-head">
+                            <h4>İşlem Listesi</h4>
+                            <p class="subtext">Diş seçin, işlem belirleyin ve “İşlem Ekle” butonuna basın.</p>
+                        </div>
+                        <div id="procedureGroupList" class="procedure-group-list empty">
+                            Henüz işlem eklenmedi.
+                        </div>
+                        <div class="dental-actions">
+                            <button type="button" class="btn btn-primary" id="addProcedureBtn">İşlem Ekle</button>
+                            <button type="button" class="btn btn-secondary" id="clearProceduresBtn">Listeyi Temizle</button>
+                        </div>
+                        <input type="hidden" asp-for="Procedure" id="procedureSummaryInput" />
+                        <input type="hidden" asp-for="ProcedureDetails" id="procedureDetailsInput" />
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="form-actions form-actions-full">
+            <button type="submit" class="btn btn-primary" id="saveAppointmentBtn" disabled>Kaydet</button>
+            <a href="@Url.Action("Index", "Home")" class="btn btn-secondary">İptal</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script src="~/js/dental-chart.js"></script>
+    <script>
+        // Ensure dental chart initializes after page load
+        if (typeof initDentalChart === 'function') {
+            initDentalChart();
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const procedureSelect = document.getElementById('procedureSelect');
+            const toothNumbersInput = document.getElementById('toothNumbers');
+            const procedureSummaryInput = document.getElementById('procedureSummaryInput');
+            const procedureDetailsInput = document.getElementById('procedureDetailsInput');
+            const procedureGroupList = document.getElementById('procedureGroupList');
+            const addProcedureBtn = document.getElementById('addProcedureBtn');
+            const clearProceduresBtn = document.getElementById('clearProceduresBtn');
+            const form = document.querySelector('.appointment-layout');
+            const saveButton = document.getElementById('saveAppointmentBtn');
+            const procedureGroups = [];
+
+            function renderProcedureGroups() {
+                if (!procedureGroupList) return;
+                if (procedureGroups.length === 0) {
+                    procedureGroupList.classList.add('empty');
+                    procedureGroupList.innerHTML = 'Henüz işlem eklenmedi.';
+                    procedureSummaryInput.value = '';
+                    procedureDetailsInput.value = '';
+                    if (saveButton) saveButton.disabled = true;
+                    return;
+                }
+
+                procedureGroupList.classList.remove('empty');
+                procedureGroupList.innerHTML = procedureGroups.map((group, index) => `
+                    <div class="procedure-group-item">
+                        <div>
+                            <strong>${group.procedure}</strong>
+                            <p>${group.teeth.join(', ')}</p>
+                        </div>
+                        <button type="button" class="remove-group" data-index="${index}">×</button>
+                    </div>
+                `).join('');
+
+                const summary = procedureGroups
+                    .map(group => `${group.procedure}: ${group.teeth.join(', ')}`)
+                    .join(' | ');
+                const allTeeth = [...new Set(procedureGroups.flatMap(group => group.teeth))];
+
+                procedureSummaryInput.value = summary;
+                procedureDetailsInput.value = JSON.stringify(procedureGroups);
+                toothNumbersInput.value = allTeeth.join(', ');
+                if (saveButton) saveButton.disabled = false;
+
+                procedureGroupList.querySelectorAll('.remove-group').forEach(button => {
+                    button.addEventListener('click', function () {
+                        const idx = parseInt(this.dataset.index, 10);
+                        procedureGroups.splice(idx, 1);
+                        renderProcedureGroups();
+                    });
+                });
+            }
+
+            if (addProcedureBtn) {
+                addProcedureBtn.addEventListener('click', function () {
+                    const selectedTeeth = window.dentalChart?.getSelectedTeeth?.() || [];
+                    if (!selectedTeeth.length) {
+                        alert('Lütfen işlem için diş seçin.');
+                        return;
+                    }
+                    if (!procedureSelect.value) {
+                        alert('Lütfen işlem türü seçin.');
+                        return;
+                    }
+                    procedureGroups.push({
+                        procedure: procedureSelect.value,
+                        teeth: [...selectedTeeth]
+                    });
+                    window.dentalChart?.clearSelection?.();
+                    procedureSelect.value = '';
+                    procedureSelect.disabled = true;
+                    renderProcedureGroups();
+                });
+            }
+
+            if (clearProceduresBtn) {
+                clearProceduresBtn.addEventListener('click', function () {
+                    procedureGroups.length = 0;
+                    renderProcedureGroups();
+                    window.dentalChart?.clearSelection?.();
+                    procedureSelect.value = '';
+                    procedureSelect.disabled = true;
+                });
+            }
+
+            // Select all teeth button
+            const selectAllTeethBtn = document.getElementById('selectAllTeethBtn');
+            let allTeethSelected = false;
+            if (selectAllTeethBtn) {
+                selectAllTeethBtn.addEventListener('click', function () {
+                    if (!allTeethSelected) {
+                        // Select all teeth
+                        const allTeeth = [18, 17, 16, 15, 14, 13, 12, 11, 21, 22, 23, 24, 25, 26, 27, 28,
+                                          48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38];
+                        window.dentalChart?.setSelectedTeeth?.(allTeeth);
+                        selectAllTeethBtn.textContent = 'Tümünü İptal Et';
+                        allTeethSelected = true;
+                    } else {
+                        // Clear selection
+                        window.dentalChart?.clearSelection?.();
+                        selectAllTeethBtn.textContent = 'Tümünü Seç';
+                        allTeethSelected = false;
+                    }
+                });
+            }
+
+            if (procedureDetailsInput && procedureDetailsInput.value) {
+                try {
+                    const parsed = JSON.parse(procedureDetailsInput.value);
+                    parsed.forEach(group => {
+                        if (group && group.procedure && Array.isArray(group.teeth)) {
+                            procedureGroups.push({
+                                procedure: group.procedure,
+                                teeth: group.teeth.map(String)
+                            });
+                        }
+                    });
+                } catch (error) {
+                    console.warn('Kayıtlı işlem listesi okunamadı.', error);
+                }
+            }
+
+            renderProcedureGroups();
+
+            if (form) {
+                form.addEventListener('submit', function (e) {
+                    if (procedureGroups.length === 0) {
+                        const selectedTeeth = window.dentalChart?.getSelectedTeeth?.() || [];
+                        if (selectedTeeth.length && procedureSelect.value) {
+                            procedureGroups.push({
+                                procedure: procedureSelect.value,
+                                teeth: [...selectedTeeth]
+                            });
+                            renderProcedureGroups();
+                            window.dentalChart?.clearSelection?.();
+                        } else {
+                            alert('Lütfen en az bir işlem ekleyin.');
+                            e.preventDefault();
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+}

@@ -1,0 +1,473 @@
+@model RandevuWeb.Models.Patient
+@{
+    ViewData["Title"] = "Hasta Düzenle";
+    var appointments = ViewBag.Appointments as List<RandevuWeb.Models.Appointment> ?? new List<RandevuWeb.Models.Appointment>();
+}
+
+<div class="form-container">
+    <h1>Hasta Düzenle</h1>
+    
+    <div class="patient-detail-tabs">
+        <button class="tab-btn active" data-tab="info" onclick="showTab('info', this)">
+            <span class="tab-icon">👤</span>
+            <span class="tab-text">Bilgiler</span>
+        </button>
+        <button class="tab-btn" data-tab="dental" onclick="showTab('dental', this)">
+            <span class="tab-icon">🦷</span>
+            <span class="tab-text">Diş İşlemleri</span>
+        </button>
+        <button class="tab-btn" data-tab="appointments" onclick="showTab('appointments', this)">
+            <span class="tab-icon">📅</span>
+            <span class="tab-text">Randevu Geçmişi</span>
+        </button>
+    </div>
+
+    <div id="infoTab" class="tab-content active">
+        <form method="post" class="patient-form" id="patientEditForm" enctype="multipart/form-data">
+            <input type="hidden" asp-for="Id" />
+            <input type="hidden" asp-for="CreatedAt" />
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label asp-for="FullName">Ad Soyad *</label>
+                    <input asp-for="FullName" class="form-control" required />
+                    <span asp-validation-for="FullName" class="text-danger"></span>
+                </div>
+                <div class="form-group">
+                    <label asp-for="TcKimlik">TC Kimlik No</label>
+                    <input asp-for="TcKimlik" class="form-control" />
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label asp-for="BirthDate">Doğum Tarihi</label>
+                    <input type="date" asp-for="BirthDate" class="form-control" />
+                </div>
+                <div class="form-group">
+                    <label asp-for="Gender">Cinsiyet</label>
+                    <select asp-for="Gender" class="form-control">
+                        <option value="">Seçin</option>
+                        <option value="Erkek">Erkek</option>
+                        <option value="Kadın">Kadın</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label asp-for="Phone">Telefon *</label>
+                    <input asp-for="Phone" class="form-control" required />
+                    <span asp-validation-for="Phone" class="text-danger"></span>
+                </div>
+                <div class="form-group">
+                    <label asp-for="Email">E-posta</label>
+                    <input type="text" asp-for="Email" class="form-control" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="PhotoUrl">Fotoğraf</label>
+                <div class="photo-upload-container">
+                    <div class="photo-preview" id="photoPreview">
+                        @if (!string.IsNullOrEmpty(Model.PhotoUrl))
+                        {
+                            <img src="@Model.PhotoUrl" alt="Hasta Fotoğrafı" />
+                        }
+                        else
+                        {
+                            <div class="photo-placeholder">
+                                <span>📷</span>
+                                <p>Fotoğraf yok</p>
+                            </div>
+                        }
+                    </div>
+                    <div class="photo-upload-controls">
+                        <input type="file" id="photoFile" name="photoFile" accept="image/*" class="file-input" />
+                        <label for="photoFile" class="btn btn-secondary btn-upload">
+                            <span>📁</span> Dosya Seç
+                        </label>
+                        <button type="button" class="btn btn-ghost btn-remove-photo" id="removePhotoBtn" style="@(string.IsNullOrEmpty(Model.PhotoUrl) ? "display:none;" : "")">
+                            <span>🗑️</span> Kaldır
+                        </button>
+                    </div>
+                    <input type="hidden" asp-for="PhotoUrl" id="photoUrl" />
+                    <small class="form-text">JPG, PNG veya GIF formatında, maksimum 5MB</small>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Address">Adres</label>
+                <textarea asp-for="Address" class="form-control" rows="2"></textarea>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label asp-for="BloodType">Kan Grubu</label>
+                    <select asp-for="BloodType" class="form-control">
+                        <option value="">Seçin</option>
+                        <option value="A+">A+</option>
+                        <option value="A-">A-</option>
+                        <option value="B+">B+</option>
+                        <option value="B-">B-</option>
+                        <option value="AB+">AB+</option>
+                        <option value="AB-">AB-</option>
+                        <option value="0+">0+</option>
+                        <option value="0-">0-</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label asp-for="Status">Durum</label>
+                    <select asp-for="Status" class="form-control">
+                        <option value="Aktif">Aktif</option>
+                        <option value="Beklemede">Beklemede</option>
+                        <option value="Pasif">Pasif</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Allergies">Alerjiler</label>
+                <textarea asp-for="Allergies" class="form-control" rows="2"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="EmergencyContact">Acil Durum İletişim</label>
+                <input asp-for="EmergencyContact" class="form-control" />
+            </div>
+
+            <div class="form-group">
+                <label asp-for="Notes">Notlar</label>
+                <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
+            </div>
+
+            <input type="hidden" asp-for="ToothNumbers" id="toothNumbers" />
+            <input type="hidden" asp-for="ProcedureDetails" id="procedureDetails" />
+        </form>
+        
+        <div class="form-actions form-actions-bottom">
+            <button type="submit" form="patientEditForm" class="btn btn-primary btn-large">Kaydet</button>
+            <a href="@Url.Action("Index", "Patient")" class="btn btn-secondary btn-large">İptal</a>
+        </div>
+    </div>
+
+    <div id="dentalTab" class="tab-content">
+        <section class="dental-lab panel">
+            <div class="panel-head">
+                <div>
+                    <h2>Diş İşlemi</h2>
+                    <p class="subtext">Gerçek diş şeması üzerinden seçim yapın</p>
+                </div>
+            </div>
+            <div class="dental-display">
+                <div id="dentalChart" class="dental-chart-grid"></div>
+                <div class="dental-meta">
+                    <div class="form-group">
+                        <label for="toothNumbersDisplay">Seçili Dişler</label>
+                        <input type="text" class="form-control" id="toothNumbersDisplay" readonly placeholder="Henüz seçim yapılmadı" />
+                    </div>
+                    <div class="form-group">
+                        <label for="procedureSelect">İşlem Türü</label>
+                        <select class="form-control" id="procedureSelect" disabled>
+                            <option value="">İşlem Seçin</option>
+                            <option value="Diş Temizliği">Diş Temizliği</option>
+                            <option value="Dolgu">Dolgu</option>
+                            <option value="Kanal Tedavisi">Kanal Tedavisi</option>
+                            <option value="Diş Çekimi">Diş Çekimi</option>
+                            <option value="İmplant">İmplant</option>
+                            <option value="Koruyucu Tedavi">Koruyucu Tedavi</option>
+                            <option value="Ortodonti">Ortodonti</option>
+                            <option value="Protez">Protez</option>
+                        </select>
+                    </div>
+                    <div class="dental-actions">
+                        <button type="button" class="btn btn-primary" id="addProcedureBtn">İşlem Ekle</button>
+                        <button type="button" class="btn btn-secondary" id="clearProceduresBtn">Temizle</button>
+                    </div>
+                </div>
+            </div>
+            <div id="procedureGroupsContainer" class="procedure-groups-container"></div>
+        </section>
+    </div>
+
+    <div id="appointmentsTab" class="tab-content">
+        <div class="appointments-history-panel panel">
+            <div class="panel-head">
+                <div>
+                    <h2>Randevu Geçmişi</h2>
+                    <p class="subtext">Hastanın tüm randevu kayıtları</p>
+                </div>
+            </div>
+            <div class="appointments-history">
+                @if (appointments.Any())
+                {
+                    @foreach (var apt in appointments)
+                    {
+                        var statusClass = (apt.Status ?? string.Empty).Replace(" ", string.Empty).ToLowerInvariant();
+                        <div class="appointment-history-card">
+                            <div class="appointment-history-header">
+                                <div class="appointment-date-badge">
+                                    <span class="date-icon">📅</span>
+                                    <div>
+                                        <div class="appointment-date">@apt.Start.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("tr-TR"))</div>
+                                        <div class="appointment-time">@apt.Start.ToString("HH:mm", new System.Globalization.CultureInfo("tr-TR"))</div>
+                                    </div>
+                                </div>
+                                <span class="status-badge status-@statusClass">@apt.Status</span>
+                            </div>
+                            <div class="appointment-history-body">
+                                <div class="appointment-detail-row">
+                                    <span class="detail-label">👨‍⚕️ Doktor:</span>
+                                    <strong>@apt.DoctorName</strong>
+                                </div>
+                                @if (!string.IsNullOrEmpty(apt.Procedure))
+                                {
+                                    <div class="appointment-detail-row">
+                                        <span class="detail-label">⚕️ İşlem:</span>
+                                        <span>@apt.Procedure</span>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(apt.ToothNumbers))
+                                {
+                                    <div class="appointment-detail-row">
+                                        <span class="detail-label">🦷 Dişler:</span>
+                                        <span class="tooth-numbers-badge">@apt.ToothNumbers</span>
+                                    </div>
+                                }
+                                @if (!string.IsNullOrEmpty(apt.Notes))
+                                {
+                                    <div class="appointment-detail-row">
+                                        <span class="detail-label">📝 Notlar:</span>
+                                        <span class="appointment-notes">@apt.Notes</span>
+                                    </div>
+                                }
+                                <div class="appointment-detail-row">
+                                    <span class="detail-label">⏱️ Süre:</span>
+                                    <span>@apt.DurationMinutes dakika</span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <div class="empty-icon">📅</div>
+                        <h2>Randevu Kaydı Yok</h2>
+                        <p>Bu hasta için henüz randevu kaydı bulunmamaktadır.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/dental-chart.js"></script>
+    <script>
+        function showTab(tabName, buttonElement) {
+            // Remove active class from all tabs and buttons
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+                tab.style.display = 'none';
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            
+            // Add active class to selected tab and button
+            const targetTab = document.getElementById(tabName + 'Tab');
+            if (targetTab) {
+                targetTab.classList.add('active');
+                targetTab.style.display = 'block';
+            }
+            
+            if (buttonElement) {
+                buttonElement.classList.add('active');
+            }
+            
+            // Smooth scroll to top of tab content
+            if (targetTab) {
+                targetTab.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
+        // Initialize tabs on page load
+        document.addEventListener('DOMContentLoaded', function () {
+            // Set initial tab visibility
+            const activeTab = document.querySelector('.tab-btn.active');
+            if (activeTab) {
+                const tabName = activeTab.dataset.tab;
+                const targetTab = document.getElementById(tabName + 'Tab');
+                if (targetTab) {
+                    targetTab.style.display = 'block';
+                }
+            }
+            
+            // Hide all other tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                if (!tab.classList.contains('active')) {
+                    tab.style.display = 'none';
+                }
+            });
+        });
+
+        // Photo upload handling
+        document.addEventListener('DOMContentLoaded', function () {
+            const photoFile = document.getElementById('photoFile');
+            const photoPreview = document.getElementById('photoPreview');
+            const photoUrlInput = document.getElementById('photoUrl');
+            const removePhotoBtn = document.getElementById('removePhotoBtn');
+
+            if (photoFile) {
+                photoFile.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        if (file.size > 5 * 1024 * 1024) {
+                            alert('Dosya boyutu 5MB\'dan büyük olamaz.');
+                            return;
+                        }
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            photoPreview.innerHTML = `<img src="${e.target.result}" alt="Hasta Fotoğrafı" />`;
+                            if (removePhotoBtn) removePhotoBtn.style.display = 'inline-flex';
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+
+            if (removePhotoBtn) {
+                removePhotoBtn.addEventListener('click', function() {
+                    photoFile.value = '';
+                    photoUrlInput.value = '';
+                    photoPreview.innerHTML = '<div class="photo-placeholder"><span>📷</span><p>Fotoğraf yok</p></div>';
+                    removePhotoBtn.style.display = 'none';
+                });
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const procedureGroups = [];
+            const procedureSelect = document.getElementById('procedureSelect');
+            const addProcedureBtn = document.getElementById('addProcedureBtn');
+            const clearProceduresBtn = document.getElementById('clearProceduresBtn');
+            const procedureGroupsContainer = document.getElementById('procedureGroupsContainer');
+            const toothNumbersInput = document.getElementById('toothNumbers');
+            const procedureDetailsInput = document.getElementById('procedureDetails');
+            const toothNumbersDisplay = document.getElementById('toothNumbersDisplay');
+
+            function renderProcedureGroups() {
+                if (!procedureGroupsContainer) return;
+
+                if (procedureGroups.length === 0) {
+                    procedureGroupsContainer.innerHTML = '<div class="empty-state small">Henüz işlem eklenmedi. Diş seçip işlem ekleyin.</div>';
+                    if (toothNumbersInput) toothNumbersInput.value = '';
+                    if (procedureDetailsInput) procedureDetailsInput.value = '';
+                    if (toothNumbersDisplay) toothNumbersDisplay.value = '';
+                    return;
+                }
+
+                const allTeeth = [];
+                const details = [];
+
+                procedureGroups.forEach((group, index) => {
+                    allTeeth.push(...group.teeth);
+                    details.push({
+                        procedure: group.procedure,
+                        teeth: group.teeth
+                    });
+                });
+
+                if (toothNumbersInput) {
+                    toothNumbersInput.value = [...new Set(allTeeth)].sort((a, b) => parseInt(a) - parseInt(b)).join(', ');
+                }
+                if (procedureDetailsInput) {
+                    procedureDetailsInput.value = JSON.stringify(details);
+                }
+                if (toothNumbersDisplay) {
+                    toothNumbersDisplay.value = [...new Set(allTeeth)].sort((a, b) => parseInt(a) - parseInt(b)).join(', ');
+                }
+
+                let html = '<div class="procedure-groups-list"><h3>Eklenen İşlemler</h3>';
+                procedureGroups.forEach((group, index) => {
+                    html += `
+                        <div class="procedure-group-item">
+                            <div class="procedure-group-info">
+                                <strong>${group.procedure}</strong>
+                                <span class="procedure-teeth">Diş: ${group.teeth.sort((a, b) => parseInt(a) - parseInt(b)).join(', ')}</span>
+                            </div>
+                            <button type="button" class="btn btn-ghost btn-sm remove-procedure" data-index="${index}">Kaldır</button>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                procedureGroupsContainer.innerHTML = html;
+
+                document.querySelectorAll('.remove-procedure').forEach(btn => {
+                    btn.addEventListener('click', function () {
+                        const index = parseInt(this.dataset.index);
+                        procedureGroups.splice(index, 1);
+                        renderProcedureGroups();
+                    });
+                });
+            }
+
+            if (addProcedureBtn) {
+                addProcedureBtn.addEventListener('click', function () {
+                    const selectedTeeth = window.dentalChart?.getSelectedTeeth?.() || [];
+                    if (selectedTeeth.length === 0) {
+                        alert('Lütfen önce diş seçin.');
+                        return;
+                    }
+                    if (!procedureSelect || !procedureSelect.value) {
+                        alert('Lütfen işlem seçin.');
+                        return;
+                    }
+                    procedureGroups.push({
+                        procedure: procedureSelect.value,
+                        teeth: [...selectedTeeth]
+                    });
+                    window.dentalChart?.clearSelection?.();
+                    procedureSelect.value = '';
+                    procedureSelect.disabled = true;
+                    renderProcedureGroups();
+                });
+            }
+
+            if (clearProceduresBtn) {
+                clearProceduresBtn.addEventListener('click', function () {
+                    procedureGroups.length = 0;
+                    renderProcedureGroups();
+                    window.dentalChart?.clearSelection?.();
+                    procedureSelect.value = '';
+                    procedureSelect.disabled = true;
+                });
+            }
+
+            if (procedureDetailsInput && procedureDetailsInput.value) {
+                try {
+                    const parsed = JSON.parse(procedureDetailsInput.value);
+                    parsed.forEach(group => {
+                        if (group && group.procedure && Array.isArray(group.teeth)) {
+                            procedureGroups.push({
+                                procedure: group.procedure,
+                                teeth: group.teeth.map(String)
+                            });
+                        }
+                    });
+                } catch (error) {
+                    console.warn('Kayıtlı işlem listesi okunamadı.', error);
+                }
+            }
+
+            renderProcedureGroups();
+
+            if (window.dentalChart && toothNumbersInput && toothNumbersInput.value) {
+                const savedTeeth = toothNumbersInput.value.split(',').map(t => t.trim()).filter(Boolean);
+                savedTeeth.forEach(tooth => {
+                    window.dentalChart.selectTooth?.(tooth);
+                });
+            }
+        });
+    </script>
+}
+

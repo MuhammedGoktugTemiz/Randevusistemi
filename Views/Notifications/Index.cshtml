@@ -1,0 +1,134 @@
+@model List<RandevuWeb.Models.Appointment>
+@{
+    ViewData["Title"] = "Bildirimler";
+    var totalNotifications = Model.Count;
+    var urgentCount = Model.Count(a => (a.Start - DateTime.Now).TotalHours < 2);
+}
+
+<div class="notifications-shell">
+    <header class="notification-hero">
+        <div>
+            <p class="hero-label">Yaklaşan randevular</p>
+            <h1>Bildirimler</h1>
+            <p class="subtext">24 saat içindeki randevu hatırlatmaları</p>
+        </div>
+        <div class="hero-stats">
+            <div class="stat-badge">
+                <span>Toplam</span>
+                <strong>@totalNotifications</strong>
+            </div>
+            @if (urgentCount > 0)
+            {
+                <div class="stat-badge urgent">
+                    <span>Acil</span>
+                    <strong>@urgentCount</strong>
+                </div>
+            }
+        </div>
+    </header>
+
+    <section class="notifications-content">
+        @if (Model.Any())
+        {
+            <div class="notifications-grid">
+                @foreach (var appointment in Model)
+                {
+                    var timeUntil = appointment.Start - DateTime.Now;
+                    var timeUntilStr = "";
+                    var isUrgent = timeUntil.TotalHours < 2;
+                    var timeClass = isUrgent ? "urgent" : "";
+                    var statusClass = (appointment.Status ?? string.Empty).Replace(" ", string.Empty).ToLowerInvariant();
+                    
+                    if (timeUntil.TotalHours >= 1)
+                    {
+                        timeUntilStr = $"{(int)timeUntil.TotalHours} saat sonra";
+                    }
+                    else if (timeUntil.TotalMinutes >= 1)
+                    {
+                        timeUntilStr = $"{(int)timeUntil.TotalMinutes} dakika sonra";
+                    }
+                    else if (timeUntil.TotalMinutes > 0)
+                    {
+                        timeUntilStr = "Yakında";
+                    }
+                    else
+                    {
+                        timeUntilStr = "Başlamak üzere";
+                    }
+
+                    <article class="notification-card @timeClass">
+                        <div class="notification-header">
+                            <div class="notification-time-badge">
+                                <span class="time-icon">🕐</span>
+                                <div>
+                                    <strong>@appointment.Start.ToString("HH:mm")</strong>
+                                    <small>@appointment.Start.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("tr-TR"))</small>
+                                </div>
+                            </div>
+                            <div class="notification-countdown @timeClass">
+                                <span>@timeUntilStr</span>
+                            </div>
+                        </div>
+                        
+                        <div class="notification-body">
+                            <div class="notification-patient">
+                                <div class="patient-avatar">
+                                    @(appointment.PatientName?.Substring(0, 1).ToUpper() ?? "H")
+                                </div>
+                                <div>
+                                    <h3>@appointment.PatientName</h3>
+                                    <p class="doctor-name">👨‍⚕️ @appointment.DoctorName</p>
+                                </div>
+                            </div>
+                            
+                            @if (!string.IsNullOrEmpty(appointment.Procedure))
+                            {
+                                <div class="notification-procedure">
+                                    <span class="procedure-label">İşlem</span>
+                                    <strong>@appointment.Procedure</strong>
+                                </div>
+                            }
+                            
+                            @if (!string.IsNullOrEmpty(appointment.ToothNumbers))
+                            {
+                                <div class="notification-teeth">
+                                    <span class="teeth-label">Diş Numaraları</span>
+                                    <div class="teeth-badges">
+                                        @foreach (var tooth in appointment.ToothNumbers.Split(',').Select(t => t.Trim()))
+                                        {
+                                            <span class="tooth-badge">@tooth</span>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                            
+                            @if (!string.IsNullOrEmpty(appointment.Notes))
+                            {
+                                <div class="notification-notes">
+                                    <p>@appointment.Notes</p>
+                                </div>
+                            }
+                        </div>
+                        
+                        <div class="notification-footer">
+                            <span class="status-pill status-@statusClass">@appointment.Status</span>
+                            <div class="notification-actions">
+                                <a href="@Url.Action("Edit", "Appointment", new { id = appointment.Id })" class="action-link">Düzenle</a>
+                                <a href="@Url.Action("Index", "Calendar")" class="action-link">Takvimde Gör</a>
+                            </div>
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <div class="empty-icon">🔔</div>
+                <h2>Bildirim Yok</h2>
+                <p>24 saat içinde yaklaşan randevu bulunmamaktadır.</p>
+                <a href="@Url.Action("Create", "Appointment")" class="btn btn-primary">Yeni Randevu Ekle</a>
+            </div>
+        }
+    </section>
+</div>

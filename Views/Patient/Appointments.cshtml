@@ -1,0 +1,274 @@
+@model List<RandevuWeb.Models.Appointment>
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Hasta Randevu Bilgileri";
+    var patient = ViewBag.Patient as RandevuWeb.Models.Patient;
+    var now = DateTime.Now;
+    var pastAppointments = Model.Where(a => a.Start < now).OrderByDescending(a => a.Start).ToList();
+    var futureAppointments = Model.Where(a => a.Start >= now).OrderBy(a => a.Start).ToList();
+}
+
+<div class="patient-appointments-shell">
+    <header class="patient-appointments-hero">
+        <div>
+            <a href="@Url.Action("Index", "Patient")" class="back-link">← Hasta Listesine Dön</a>
+            <h1>@(patient?.FullName ?? "Hasta") - Randevu Bilgileri</h1>
+            <p class="subtext">Geçmiş ve gelecek tüm randevu kayıtları</p>
+        </div>
+        <div class="patient-appointments-stats">
+            <div class="stat-badge">
+                <span>Toplam</span>
+                <strong>@Model.Count</strong>
+            </div>
+            <div class="stat-badge">
+                <span>Geçmiş</span>
+                <strong>@pastAppointments.Count</strong>
+            </div>
+            <div class="stat-badge">
+                <span>Gelecek</span>
+                <strong>@futureAppointments.Count</strong>
+            </div>
+        </div>
+    </header>
+
+    <div class="appointments-timeline">
+        @if (futureAppointments.Any())
+        {
+            <section class="timeline-section">
+                <h2 class="timeline-section-title">
+                    <span class="timeline-icon">📅</span>
+                    Gelecek Randevular
+                </h2>
+                <div class="appointments-list">
+                    @foreach (var appointment in futureAppointments)
+                    {
+                        var statusClass = (appointment.Status ?? string.Empty).Replace(" ", string.Empty).ToLowerInvariant();
+                        var procedureDetails = new List<object>();
+                        
+                        if (!string.IsNullOrWhiteSpace(appointment.ProcedureDetails))
+                        {
+                            try
+                            {
+                                procedureDetails = JsonSerializer.Deserialize<List<object>>(appointment.ProcedureDetails) ?? new List<object>();
+                            }
+                            catch { }
+                        }
+                        
+                        <article class="appointment-card-timeline future">
+                            <div class="appointment-card-header">
+                                <div class="appointment-date-time">
+                                    <span class="appointment-date">@appointment.Start.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("tr-TR"))</span>
+                                    <span class="appointment-time">@appointment.Start.ToString("HH:mm")</span>
+                                </div>
+                                <div class="appointment-doctor">
+                                    <strong>👨‍⚕️ @appointment.DoctorName</strong>
+                                    <span class="doctor-specialty">@appointment.DoctorSpecialty</span>
+                                </div>
+                                <span class="status-pill status-@statusClass">@appointment.Status</span>
+                            </div>
+                            
+                            <div class="appointment-card-body">
+                                @if (procedureDetails.Any())
+                                {
+                                    <div class="procedure-details-list">
+                                        <h4>Yapılacak İşlemler:</h4>
+                                        @foreach (var detail in procedureDetails)
+                                        {
+                                            var detailDict = detail as JsonElement?;
+                                            if (detailDict.HasValue)
+                                            {
+                                                var detailObj = detailDict.Value;
+                                                var procedure = detailObj.TryGetProperty("procedure", out var proc) ? proc.GetString() : "";
+                                                var teeth = detailObj.TryGetProperty("teeth", out var teethProp) 
+                                                    ? teethProp.EnumerateArray().Select(t => t.GetString()).Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t!).ToList()
+                                                    : new List<string>();
+                                                
+                                                if (!string.IsNullOrWhiteSpace(procedure) && teeth.Any())
+                                                {
+                                                    <div class="procedure-detail-item">
+                                                        <div class="procedure-info">
+                                                            <strong>@procedure</strong>
+                                                            <div class="procedure-teeth-badges">
+                                                                @foreach (var tooth in teeth)
+                                                                {
+                                                                    <span class="tooth-badge-small">@tooth</span>
+                                                                }
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            }
+                                        }
+                                    </div>
+                                }
+                                else if (!string.IsNullOrWhiteSpace(appointment.Procedure))
+                                {
+                                    <div class="procedure-simple">
+                                        <strong>İşlem:</strong> @appointment.Procedure
+                                        @if (!string.IsNullOrWhiteSpace(appointment.ToothNumbers))
+                                        {
+                                            <div class="procedure-teeth-badges">
+                                                @foreach (var tooth in appointment.ToothNumbers.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                                                {
+                                                    <span class="tooth-badge-small">@tooth</span>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                
+                                @if (!string.IsNullOrWhiteSpace(appointment.Notes))
+                                {
+                                    <div class="appointment-notes">
+                                        <strong>Notlar:</strong> @appointment.Notes
+                                    </div>
+                                }
+                            </div>
+                            
+                            <div class="appointment-card-footer">
+                                <span class="duration-badge">⏱️ @appointment.DurationMinutes dakika</span>
+                                <div class="appointment-actions-group">
+                                    @if (appointment.Status == "Bekliyor")
+                                    {
+                                        <form method="post" action="@Url.Action("UpdateStatus", "Appointment", new { id = appointment.Id, status = "Tamamlandı", patientId = patient?.Id ?? 0 })" style="display: inline;">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Bu randevuyu tamamlandı olarak işaretlemek istediğinizden emin misiniz?')">
+                                                ✓ Tamamlandı
+                                            </button>
+                                        </form>
+                                    }
+                                    <a href="@Url.Action("Edit", "Appointment", new { id = appointment.Id })" class="action-link">Düzenle</a>
+                                </div>
+                            </div>
+                        </article>
+                    }
+                </div>
+            </section>
+        }
+
+        @if (pastAppointments.Any())
+        {
+            <section class="timeline-section">
+                <h2 class="timeline-section-title">
+                    <span class="timeline-icon">📋</span>
+                    Geçmiş Randevular
+                </h2>
+                <div class="appointments-list">
+                    @foreach (var appointment in pastAppointments)
+                    {
+                        var statusClass = (appointment.Status ?? string.Empty).Replace(" ", string.Empty).ToLowerInvariant();
+                        var procedureDetails = new List<object>();
+                        
+                        if (!string.IsNullOrWhiteSpace(appointment.ProcedureDetails))
+                        {
+                            try
+                            {
+                                procedureDetails = JsonSerializer.Deserialize<List<object>>(appointment.ProcedureDetails) ?? new List<object>();
+                            }
+                            catch { }
+                        }
+                        
+                        <article class="appointment-card-timeline past">
+                            <div class="appointment-card-header">
+                                <div class="appointment-date-time">
+                                    <span class="appointment-date">@appointment.Start.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("tr-TR"))</span>
+                                    <span class="appointment-time">@appointment.Start.ToString("HH:mm")</span>
+                                </div>
+                                <div class="appointment-doctor">
+                                    <strong>👨‍⚕️ @appointment.DoctorName</strong>
+                                    <span class="doctor-specialty">@appointment.DoctorSpecialty</span>
+                                </div>
+                                <span class="status-pill status-@statusClass">@appointment.Status</span>
+                            </div>
+                            
+                            <div class="appointment-card-body">
+                                @if (procedureDetails.Any())
+                                {
+                                    <div class="procedure-details-list">
+                                        <h4>Yapılan İşlemler:</h4>
+                                        @foreach (var detail in procedureDetails)
+                                        {
+                                            var detailDict = detail as JsonElement?;
+                                            if (detailDict.HasValue)
+                                            {
+                                                var detailObj = detailDict.Value;
+                                                var procedure = detailObj.TryGetProperty("procedure", out var proc) ? proc.GetString() : "";
+                                                var teeth = detailObj.TryGetProperty("teeth", out var teethProp) 
+                                                    ? teethProp.EnumerateArray().Select(t => t.GetString()).Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t!).ToList()
+                                                    : new List<string>();
+                                                
+                                                if (!string.IsNullOrWhiteSpace(procedure) && teeth.Any())
+                                                {
+                                                    <div class="procedure-detail-item">
+                                                        <div class="procedure-info">
+                                                            <strong>@procedure</strong>
+                                                            <div class="procedure-teeth-badges">
+                                                                @foreach (var tooth in teeth)
+                                                                {
+                                                                    <span class="tooth-badge-small">@tooth</span>
+                                                                }
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            }
+                                        }
+                                    </div>
+                                }
+                                else if (!string.IsNullOrWhiteSpace(appointment.Procedure))
+                                {
+                                    <div class="procedure-simple">
+                                        <strong>İşlem:</strong> @appointment.Procedure
+                                        @if (!string.IsNullOrWhiteSpace(appointment.ToothNumbers))
+                                        {
+                                            <div class="procedure-teeth-badges">
+                                                @foreach (var tooth in appointment.ToothNumbers.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                                                {
+                                                    <span class="tooth-badge-small">@tooth</span>
+                                                }
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                                
+                                @if (!string.IsNullOrWhiteSpace(appointment.Notes))
+                                {
+                                    <div class="appointment-notes">
+                                        <strong>Notlar:</strong> @appointment.Notes
+                                    </div>
+                                }
+                            </div>
+                            
+                            <div class="appointment-card-footer">
+                                <span class="duration-badge">⏱️ @appointment.DurationMinutes dakika</span>
+                                <div class="appointment-actions-group">
+                                    @if (appointment.Status == "Bekliyor")
+                                    {
+                                        <form method="post" action="@Url.Action("UpdateStatus", "Appointment", new { id = appointment.Id, status = "Tamamlandı", patientId = patient?.Id ?? 0 })" style="display: inline;">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-success btn-sm" onclick="return confirm('Bu randevuyu tamamlandı olarak işaretlemek istediğinizden emin misiniz?')">
+                                                ✓ Tamamlandı
+                                            </button>
+                                        </form>
+                                    }
+                                    <a href="@Url.Action("Edit", "Appointment", new { id = appointment.Id })" class="action-link">Detaylar</a>
+                                </div>
+                            </div>
+                        </article>
+                    }
+                </div>
+            </section>
+        }
+
+        @if (!Model.Any())
+        {
+            <div class="empty-state">
+                <div class="empty-icon">📅</div>
+                <h2>Randevu Bulunamadı</h2>
+                <p>Bu hasta için henüz randevu kaydı bulunmamaktadır.</p>
+                <a href="@Url.Action("Create", "Appointment")" class="btn btn-primary">Yeni Randevu Oluştur</a>
+            </div>
+        }
+    </div>
+</div>
+

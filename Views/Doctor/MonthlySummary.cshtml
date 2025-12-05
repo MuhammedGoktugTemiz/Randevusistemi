@@ -1,0 +1,215 @@
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Aylık Özet";
+    var doctor = ViewBag.Doctor as RandevuWeb.Models.Doctor;
+    var appointments = ViewBag.Appointments as List<RandevuWeb.Models.Appointment> ?? new List<RandevuWeb.Models.Appointment>();
+    var year = (int)ViewBag.Year;
+    var month = (int)ViewBag.Month;
+    var monthName = new DateTime(year, month, 1).ToString("MMMM yyyy", new System.Globalization.CultureInfo("tr-TR"));
+    
+    var total = appointments.Count;
+    var completed = appointments.Count(a => a.Status == "Tamamlandı");
+    var waiting = appointments.Count(a => a.Status == "Bekliyor");
+    var cancelled = appointments.Count(a => a.Status == "İptal");
+    var inProgress = appointments.Count(a => a.Status == "İşlem Devam Edecek");
+}
+
+<div class="doctor-summary-shell">
+    <header class="doctor-summary-hero">
+        <div>
+            <a href="@Url.Action("Index", "Doctor")" class="back-link">← Doktor Listesine Dön</a>
+            <h1>@(doctor?.Name ?? "Bilinmeyen Doktor")</h1>
+            <p class="subtext">@doctor?.Specialty</p>
+            <div class="month-badge">
+                <span class="month-icon">📅</span>
+                <span>@monthName</span>
+            </div>
+        </div>
+        <div class="hero-stats">
+            <div class="stat-badge-large">
+                <span>Toplam Randevu</span>
+                <strong>@total</strong>
+            </div>
+        </div>
+    </header>
+
+    <section class="summary-metrics">
+        <div class="metric-card-modern">
+            <div class="metric-icon completed">✓</div>
+            <div class="metric-content">
+                <span class="metric-label">Tamamlanan</span>
+                <strong class="metric-value">@completed</strong>
+                <small class="metric-percentage">@(total > 0 ? Math.Round((completed * 100.0) / total, 1) : 0)%</small>
+            </div>
+        </div>
+        <div class="metric-card-modern">
+            <div class="metric-icon waiting">⏳</div>
+            <div class="metric-content">
+                <span class="metric-label">Bekleyen</span>
+                <strong class="metric-value">@waiting</strong>
+                <small class="metric-percentage">@(total > 0 ? Math.Round((waiting * 100.0) / total, 1) : 0)%</small>
+            </div>
+        </div>
+        <div class="metric-card-modern">
+            <div class="metric-icon in-progress">🔄</div>
+            <div class="metric-content">
+                <span class="metric-label">Devam Eden</span>
+                <strong class="metric-value">@inProgress</strong>
+                <small class="metric-percentage">@(total > 0 ? Math.Round((inProgress * 100.0) / total, 1) : 0)%</small>
+            </div>
+        </div>
+        <div class="metric-card-modern">
+            <div class="metric-icon cancelled">✕</div>
+            <div class="metric-content">
+                <span class="metric-label">İptal</span>
+                <strong class="metric-value">@cancelled</strong>
+                <small class="metric-percentage">@(total > 0 ? Math.Round((cancelled * 100.0) / total, 1) : 0)%</small>
+            </div>
+        </div>
+    </section>
+
+    <section class="appointments-section panel">
+        <div class="panel-head">
+            <div>
+                <h2>Randevu Detayları</h2>
+                <p class="subtext">@monthName ayındaki tüm randevular</p>
+            </div>
+            <div class="appointment-filters">
+                <button class="filter-btn active" data-filter="all">Tümü (@total)</button>
+                <button class="filter-btn" data-filter="completed">Tamamlanan (@completed)</button>
+                <button class="filter-btn" data-filter="waiting">Bekleyen (@waiting)</button>
+                <button class="filter-btn" data-filter="cancelled">İptal (@cancelled)</button>
+            </div>
+        </div>
+
+        <div class="appointments-timeline">
+            @if (appointments.Any())
+            {
+                @foreach (var apt in appointments.OrderBy(a => a.Start))
+                {
+                    var statusClass = (apt.Status ?? string.Empty).Replace(" ", string.Empty).ToLowerInvariant();
+                    var procedureDetails = new List<object>();
+                    
+                    if (!string.IsNullOrWhiteSpace(apt.ProcedureDetails))
+                    {
+                        try
+                        {
+                            procedureDetails = JsonSerializer.Deserialize<List<object>>(apt.ProcedureDetails) ?? new List<object>();
+                        }
+                        catch { }
+                    }
+                    
+                    <article class="appointment-card-summary" data-status="@statusClass">
+                        <div class="appointment-card-header-summary">
+                            <div class="appointment-date-time-summary">
+                                <span class="appointment-date-summary">@apt.Start.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("tr-TR"))</span>
+                                <span class="appointment-time-summary">@apt.Start.ToString("HH:mm")</span>
+                            </div>
+                            <div class="appointment-patient-summary">
+                                <strong>@apt.PatientName</strong>
+                                <span class="patient-meta">@apt.DurationMinutes dakika</span>
+                            </div>
+                            <span class="status-pill status-@statusClass">@apt.Status</span>
+                        </div>
+                        
+                        <div class="appointment-card-body-summary">
+                            @if (procedureDetails.Any())
+                            {
+                                <div class="procedure-details-list-summary">
+                                    @foreach (var detail in procedureDetails)
+                                    {
+                                        var detailDict = detail as JsonElement?;
+                                        if (detailDict.HasValue)
+                                        {
+                                            var detailObj = detailDict.Value;
+                                            var procedure = detailObj.TryGetProperty("procedure", out var proc) ? proc.GetString() : "";
+                                            var teeth = detailObj.TryGetProperty("teeth", out var teethProp) 
+                                                ? teethProp.EnumerateArray().Select(t => t.GetString()).Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t!).ToList()
+                                                : new List<string>();
+                                            
+                                            if (!string.IsNullOrWhiteSpace(procedure) && teeth.Any())
+                                            {
+                                                <div class="procedure-item-summary">
+                                                    <strong>@procedure</strong>
+                                                    <div class="procedure-teeth-summary">
+                                                        @foreach (var tooth in teeth)
+                                                        {
+                                                            <span class="tooth-badge-tiny">@tooth</span>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            }
+                                        }
+                                    }
+                                </div>
+                            }
+                            else if (!string.IsNullOrWhiteSpace(apt.Procedure))
+                            {
+                                <div class="procedure-simple-summary">
+                                    <strong>@apt.Procedure</strong>
+                                    @if (!string.IsNullOrWhiteSpace(apt.ToothNumbers))
+                                    {
+                                        <div class="procedure-teeth-summary">
+                                            @foreach (var tooth in apt.ToothNumbers.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                                            {
+                                                <span class="tooth-badge-tiny">@tooth</span>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            
+                            @if (!string.IsNullOrWhiteSpace(apt.Notes))
+                            {
+                                <div class="appointment-notes-summary">
+                                    <span>📝</span> @apt.Notes
+                                </div>
+                            }
+                        </div>
+                    </article>
+                }
+            }
+            else
+            {
+                <div class="empty-state">
+                    <div class="empty-icon">📅</div>
+                    <h3>Randevu Bulunamadı</h3>
+                    <p>Bu ay için randevu kaydı bulunmamaktadır.</p>
+                </div>
+            }
+        </div>
+    </section>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    const appointmentCards = document.querySelectorAll('.appointment-card-summary');
+    
+    filterButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const filter = this.dataset.filter;
+            
+            filterButtons.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
+            appointmentCards.forEach(card => {
+                if (filter === 'all') {
+                    card.style.display = 'block';
+                } else {
+                    const status = card.dataset.status;
+                    if (filter === 'completed' && status === 'tamamlandı') {
+                        card.style.display = 'block';
+                    } else if (filter === 'waiting' && status === 'bekliyor') {
+                        card.style.display = 'block';
+                    } else if (filter === 'cancelled' && status === 'iptal') {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                }
+            });
+        });
+    });
+});
+</script>

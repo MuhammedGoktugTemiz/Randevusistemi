@@ -1,0 +1,78 @@
+@{
+    var pageTitle = ViewData["Title"]?.ToString() ?? "Kontrol Paneli";
+    var userName = User.Identity?.Name ?? "Admin";
+    var userInitial = string.IsNullOrWhiteSpace(userName) ? "U" : userName[..1].ToUpperInvariant();
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString() ?? string.Empty;
+    var action = ViewContext.RouteData.Values["action"]?.ToString() ?? string.Empty;
+    
+    // Check if user is a doctor
+    var doctorIdClaim = User.FindFirst("DoctorId")?.Value;
+    int doctorId = 0;
+    var isDoctor = !string.IsNullOrEmpty(doctorIdClaim) && int.TryParse(doctorIdClaim, out doctorId);
+    var doctorIdValue = isDoctor ? doctorId : 0;
+}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@pageTitle - Ömer Albayrak Diş Kliniği</title>
+    <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<body class="app-body">
+    <div class="layout-shell">
+        <header class="app-navbar">
+            <div class="navbar-left">
+                <div class="logo-mark">🦷</div>
+                <div>
+                    <p class="logo-title">Randevu Sistemi</p>
+                    <span class="logo-subtitle">Dijital Klinik Paneli</span>
+                </div>
+            </div>
+            <nav class="navbar-menu">
+                <a href="@Url.Action("Index", "Home")" class="menu-link @(controller == "Home" ? "active" : "")">Anasayfa</a>
+                @if (isDoctor)
+                {
+                    <a href="@Url.Action("MyAppointments", "DoctorAuth", new { id = doctorIdValue })" class="menu-link @(controller == "DoctorAuth" && action == "MyAppointments" ? "active" : "")">📅 Randevularım</a>
+                }
+                <a href="@Url.Action("Index", "Calendar")" class="menu-link @(controller == "Calendar" ? "active" : "")">Takvim</a>
+                <a href="@Url.Action("Create", "Appointment")" class="menu-link @((controller == "Appointment" && action == "Create") ? "active" : "")">Randevu Ekle</a>
+                <a href="@Url.Action("Index", "Patient")" class="menu-link @(controller == "Patient" ? "active" : "")">Hastalar</a>
+                <a href="@Url.Action("Index", "Doctor")" class="menu-link @(controller == "Doctor" ? "active" : "")">Doktorlar</a>
+                <a href="@Url.Action("Index", "Reports")" class="menu-link @(controller == "Reports" ? "active" : "")">Raporlar</a>
+                <a href="@Url.Action("Index", "Notifications")" class="menu-link @(controller == "Notifications" ? "active" : "")">Bildirimler</a>
+                <a href="@Url.Action("Index", "Settings")" class="menu-link @(controller == "Settings" ? "active" : "")">Ayarlar</a>
+            </nav>
+            <div class="navbar-actions">
+                <div class="user-pill">
+                    <div class="user-initial">@userInitial</div>
+                    <div>
+                        <p>@userName</p>
+                        <span>@(isDoctor ? "Doktor" : "Yönetici")</span>
+                    </div>
+                </div>
+                @if (isDoctor)
+                {
+                    <form method="post" action="@Url.Action("Logout", "DoctorAuth")">
+                        <button type="submit" class="btn btn-ghost">Çıkış</button>
+                    </form>
+                }
+                else
+                {
+                    <form method="post" action="@Url.Action("Logout", "Account")">
+                        <button type="submit" class="btn btn-ghost">Çıkış</button>
+                    </form>
+                }
+            </div>
+        </header>
+        <div class="content-area">
+            <main class="main-content">
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+    <script src="~/js/site.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
+

@@ -1,0 +1,163 @@
+@model RandevuWeb.Models.Patient
+@{
+    ViewData["Title"] = "Yeni Hasta Ekle";
+}
+
+<div class="form-container">
+    <h1>Yeni Hasta Ekle</h1>
+    
+    <form asp-action="Create" asp-controller="Patient" method="post" class="patient-form" enctype="multipart/form-data">
+        @Html.AntiForgeryToken()
+        <div asp-validation-summary="All" class="alert alert-error" role="alert" style="display: block; padding: 1rem; margin-bottom: 1rem; background: #fee2e2; border: 1px solid #ef4444; border-radius: 8px; color: #991b1b;"></div>
+        <div class="form-row">
+            <div class="form-group">
+                <label asp-for="FullName">Ad Soyad *</label>
+                <input asp-for="FullName" class="form-control" required />
+                <span asp-validation-for="FullName" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="TcKimlik">TC Kimlik No</label>
+                <input asp-for="TcKimlik" class="form-control" />
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label asp-for="BirthDate">Doğum Tarihi</label>
+                <input type="date" asp-for="BirthDate" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label asp-for="Gender">Cinsiyet</label>
+                <select asp-for="Gender" class="form-control">
+                    <option value="">Seçin</option>
+                    <option value="Erkek">Erkek</option>
+                    <option value="Kadın">Kadın</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label asp-for="Phone">Telefon *</label>
+                <input asp-for="Phone" class="form-control" required />
+                <span asp-validation-for="Phone" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Email">E-posta</label>
+                <input type="text" asp-for="Email" class="form-control" />
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="PhotoUrl">Fotoğraf</label>
+            <div class="photo-upload-container">
+                <div class="photo-preview" id="photoPreview">
+                    <div class="photo-placeholder">
+                        <span>📷</span>
+                        <p>Fotoğraf yok</p>
+                    </div>
+                </div>
+                <div class="photo-upload-controls">
+                    <input type="file" id="photoFile" name="photoFile" accept="image/*" class="file-input" />
+                    <label for="photoFile" class="btn btn-secondary btn-upload">
+                        <span>📁</span> Dosya Seç
+                    </label>
+                    <button type="button" class="btn btn-ghost btn-remove-photo" id="removePhotoBtn" style="display:none;">
+                        <span>🗑️</span> Kaldır
+                    </button>
+                </div>
+                <input type="hidden" asp-for="PhotoUrl" id="photoUrl" />
+                <small class="form-text">JPG, PNG veya GIF formatında, maksimum 5MB</small>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Address">Adres</label>
+            <textarea asp-for="Address" class="form-control" rows="2"></textarea>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label asp-for="BloodType">Kan Grubu</label>
+                <select asp-for="BloodType" class="form-control">
+                    <option value="">Seçin</option>
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                    <option value="0+">0+</option>
+                    <option value="0-">0-</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label asp-for="Status">Durum</label>
+                <select asp-for="Status" class="form-control">
+                    <option value="Aktif">Aktif</option>
+                    <option value="Beklemede">Beklemede</option>
+                    <option value="Pasif">Pasif</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Allergies">Alerjiler</label>
+            <textarea asp-for="Allergies" class="form-control" rows="2"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="EmergencyContact">Acil Durum İletişim</label>
+            <input asp-for="EmergencyContact" class="form-control" />
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Notes">Notlar</label>
+            <textarea asp-for="Notes" class="form-control" rows="3"></textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Kaydet</button>
+            <a href="@Url.Action("Index", "Patient")" class="btn btn-secondary">İptal</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const photoFile = document.getElementById('photoFile');
+            const photoPreview = document.getElementById('photoPreview');
+            const photoUrlInput = document.getElementById('photoUrl');
+            const removePhotoBtn = document.getElementById('removePhotoBtn');
+
+            if (photoFile) {
+                photoFile.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        if (file.size > 5 * 1024 * 1024) {
+                            alert('Dosya boyutu 5MB\'dan büyük olamaz.');
+                            return;
+                        }
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            photoPreview.innerHTML = `<img src="${e.target.result}" alt="Hasta Fotoğrafı" />`;
+                            if (removePhotoBtn) removePhotoBtn.style.display = 'inline-flex';
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+            }
+
+            if (removePhotoBtn) {
+                removePhotoBtn.addEventListener('click', function() {
+                    photoFile.value = '';
+                    photoUrlInput.value = '';
+                    photoPreview.innerHTML = '<div class="photo-placeholder"><span>📷</span><p>Fotoğraf yok</p></div>';
+                    removePhotoBtn.style.display = 'none';
+                });
+            }
+        });
+    </script>
+}
+

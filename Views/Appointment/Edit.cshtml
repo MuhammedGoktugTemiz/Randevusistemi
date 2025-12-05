@@ -1,0 +1,142 @@
+@model RandevuWeb.Models.Appointment
+@{
+    ViewData["Title"] = "Randevu Düzenle";
+    var patients = ViewBag.Patients as List<RandevuWeb.Models.Patient> ?? new List<RandevuWeb.Models.Patient>();
+    var doctors = ViewBag.Doctors as List<RandevuWeb.Models.Doctor> ?? new List<RandevuWeb.Models.Doctor>();
+}
+
+<div class="form-container">
+    <h1>Randevu Düzenle</h1>
+    
+    <form method="post" class="appointment-form">
+        <input type="hidden" asp-for="Id" />
+        <input type="hidden" asp-for="CreatedAt" />
+        <input type="hidden" asp-for="ProcedureDetails" />
+
+        <div class="form-row">
+            <div class="form-group">
+                <label asp-for="PatientId">Hasta *</label>
+                <select asp-for="PatientId" class="form-control" required>
+                    <option value="">Hasta Seçin</option>
+                    @foreach (var patient in patients)
+                    {
+                        <option value="@patient.Id" selected="@(patient.Id == Model.PatientId)">@patient.FullName</option>
+                    }
+                </select>
+                <span asp-validation-for="PatientId" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="DoctorId">Doktor *</label>
+                <select asp-for="DoctorId" class="form-control" required>
+                    <option value="">Doktor Seçin</option>
+                    @foreach (var doctor in doctors)
+                    {
+                        <option value="@doctor.Id" selected="@(doctor.Id == Model.DoctorId)">@doctor.DisplayName</option>
+                    }
+                </select>
+                <span asp-validation-for="DoctorId" class="text-danger"></span>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label asp-for="Start">Tarih *</label>
+                <input type="date" asp-for="Start" class="form-control" required value="@Model.Start.ToString("yyyy-MM-dd")" />
+                <span asp-validation-for="Start" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label>Saat *</label>
+                <select id="timeSelect" name="timeSelect" class="form-control" required>
+                    <option value="">Saat Seçin</option>
+                    @for (int hour = 8; hour < 22; hour++)
+                    {
+                        var time00 = $"{hour:00}:00";
+                        var time30 = $"{hour:00}:30";
+                        var isSelected00 = Model.Start.ToString("HH:mm") == time00;
+                        var isSelected30 = Model.Start.ToString("HH:mm") == time30;
+                        <option value="@time00" selected="@isSelected00">@time00</option>
+                        <option value="@time30" selected="@isSelected30">@time30</option>
+                    }
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="DurationMinutes">Süre (dakika) *</label>
+                <select asp-for="DurationMinutes" class="form-control" required>
+                    <option value="30" selected="@(Model.DurationMinutes == 30)">30 dakika</option>
+                    <option value="45" selected="@(Model.DurationMinutes == 45)">45 dakika</option>
+                    <option value="60" selected="@(Model.DurationMinutes == 60)">60 dakika</option>
+                    <option value="90" selected="@(Model.DurationMinutes == 90)">90 dakika</option>
+                    <option value="120" selected="@(Model.DurationMinutes == 120)">120 dakika</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="dental-chart-section">
+            <h3>Diş İşlemi</h3>
+            <div id="dentalChart"></div>
+            <div class="form-group">
+                <label asp-for="ToothNumbers">Diş Numaraları</label>
+                <input type="text" asp-for="ToothNumbers" class="form-control" id="toothNumbers" readonly />
+            </div>
+            <div class="form-group">
+                <label asp-for="Procedure">İşlem Türü</label>
+                <select asp-for="Procedure" class="form-control" id="procedureSelect">
+                    <option value="">İşlem Seçin</option>
+                    <option value="Diş Temizliği" selected="@(Model.Procedure == "Diş Temizliği")">Diş Temizliği</option>
+                    <option value="Dolgu" selected="@(Model.Procedure == "Dolgu")">Dolgu</option>
+                    <option value="Kanal Tedavisi" selected="@(Model.Procedure == "Kanal Tedavisi")">Kanal Tedavisi</option>
+                    <option value="Diş Çekimi" selected="@(Model.Procedure == "Diş Çekimi")">Diş Çekimi</option>
+                    <option value="İmplant" selected="@(Model.Procedure == "İmplant")">İmplant</option>
+                    <option value="Koruyucu Tedavi" selected="@(Model.Procedure == "Koruyucu Tedavi")">Koruyucu Tedavi</option>
+                    <option value="Ortodonti" selected="@(Model.Procedure == "Ortodonti")">Ortodonti</option>
+                    <option value="Protez" selected="@(Model.Procedure == "Protez")">Protez</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Status">Durum</label>
+            <select asp-for="Status" class="form-control">
+                <option value="Bekliyor" selected="@(Model.Status == "Bekliyor")">Bekliyor</option>
+                <option value="Tamamlandı" selected="@(Model.Status == "Tamamlandı")">Tamamlandı</option>
+                <option value="İptal" selected="@(Model.Status == "İptal")">İptal</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Notes">Notlar</label>
+            <textarea asp-for="Notes" class="form-control" rows="4">@Model.Notes</textarea>
+        </div>
+
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div class="alert alert-error">
+                @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                {
+                    <p>@error.ErrorMessage</p>
+                }
+            </div>
+        }
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Kaydet</button>
+            <a href="@Url.Action("Index", "Home")" class="btn btn-secondary">İptal</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script src="~/js/dental-chart.js"></script>
+    <script>
+        // Ensure dental chart initializes after page load
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof initDentalChart === 'function') {
+                initDentalChart();
+            }
+        });
+    </script>
+}
+

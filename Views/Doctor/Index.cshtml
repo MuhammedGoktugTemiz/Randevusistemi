@@ -1,0 +1,132 @@
+@model List<RandevuWeb.Models.Doctor>
+@{
+    ViewData["Title"] = "Doktor Yönetimi";
+    var totalDoctors = Model.Count;
+    var specialtyCount = Model.Select(d => d.Specialty).Distinct().Count();
+    var stats = ViewBag.DoctorStats as Dictionary<int, RandevuWeb.Models.DoctorStats> 
+        ?? new Dictionary<int, RandevuWeb.Models.DoctorStats>();
+    var monthLabel = ViewBag.MonthLabel as string 
+        ?? DateTime.Now.ToString("MMMM yyyy", new System.Globalization.CultureInfo("tr-TR"));
+}
+
+<div class="doctors-shell">
+    <header class="doctor-hero">
+        <div>
+            <p class="hero-label">Klinik kadro</p>
+            <h1>Doktor Yönetimi</h1>
+            <p class="subtext">Aktif uzmanlarınızı buradan yönetin</p>
+        </div>
+        <div class="hero-actions">
+            <a href="@Url.Action("Create", "Doctor")" class="btn btn-primary">Yeni Doktor Ekle</a>
+        </div>
+    </header>
+<br>
+    <section class="doctor-stats">
+        <div class="metric-card">
+            <span>Toplam Doktor</span>
+            <strong>@totalDoctors</strong>
+            <small>Klinik kadro</small>
+        </div>
+        <div class="metric-card">
+            <span>Uzmanlık</span>
+            <strong>@specialtyCount</strong>
+            <small>Alan sayısı</small>
+        </div>
+        <div class="metric-card">
+            <span>Aylık Özet</span>
+            <strong>@DateTime.Now.ToString("MMM", new System.Globalization.CultureInfo("tr-TR"))</strong>
+            <small>Hızlı erişim</small>
+        </div>
+    </section>
+
+    <section class="doctor-showcase">
+        @if (Model.Any())
+        {
+            @foreach (var doctor in Model)
+            {
+                var doctorCode = $"DK-{doctor.Id:000}";
+                stats.TryGetValue(doctor.Id, out RandevuWeb.Models.DoctorStats? doctorStats);
+                doctorStats ??= new RandevuWeb.Models.DoctorStats();
+                <article class="doctor-card-pro">
+                    <div class="doctor-card-banner">
+                        <div>
+                            <p class="hero-label">Uzmanlık</p>
+                            <h3>@doctor.Name</h3>
+                            <p class="subtext">@doctor.Specialty</p>
+                        </div>
+                        <span class="doctor-code">@doctorCode</span>
+                    </div>
+                    <div class="doctor-meta-grid">
+                        <div>
+                            <span>Uzmanlık Alanı</span>
+                            <strong>@doctor.Specialty</strong>
+                        </div>
+                        <div>
+                            <span>Klinik Rol</span>
+                            <strong>Hasta planlama</strong>
+                        </div>
+                        <div>
+                            <span>Durum</span>
+                            <strong class="status-pill status-bekliyor">Aktif</strong>
+                        </div>
+                    </div>
+                    <div class="doctor-badges">
+                        <span>Planlama</span>
+                        <span>Operasyon</span>
+                        <span>Takip</span>
+                    </div>
+                    <div class="doctor-cta">
+                        <button type="button" class="btn btn-secondary btn-sm doctor-toggle" data-doctor="@doctor.Id">
+                            @monthLabel özeti
+                        </button>
+                        <a href="@Url.Action("Edit", "Doctor", new { id = doctor.Id })" class="btn btn-ghost btn-sm">Düzenle</a>
+                        <form method="post" action="@Url.Action("Delete", "Doctor", new { id = doctor.Id })" onsubmit="return confirm('Bu doktoru silmek istediğinizden emin misiniz?')" class="inline-form">
+                            <button type="submit" class="btn btn-ghost btn-sm">Sil</button>
+                        </form>
+                    </div>
+                    <div class="doctor-detail" id="doctor-detail-@doctor.Id">
+                        <div>
+                            <span>Bu ayki toplam hasta</span>
+                            <strong>@doctorStats.Total</strong>
+                        </div>
+                        <div>
+                            <span>Tamamlanan</span>
+                            <strong>@doctorStats.Completed</strong>
+                        </div>
+                        <div>
+                            <span>Bekleyen</span>
+                            <strong>@doctorStats.Waiting</strong>
+                        </div>
+                        <div>
+                            <span>İptal</span>
+                            <strong>@doctorStats.Cancelled</strong>
+                        </div>
+                        <a href="@Url.Action("MonthlySummary", "Doctor", new { id = doctor.Id, year = DateTime.Now.Year, month = DateTime.Now.Month })" class="btn btn-primary btn-sm">Aylık raporu aç</a>
+                    </div>
+                </article>
+            }
+        }
+        else
+        {
+            <div class="empty-state">
+                <p>Henüz doktor kaydı bulunmamaktadır.</p>
+                <a href="@Url.Action("Create", "Doctor")" class="btn btn-primary">İlk Doktoru Ekle</a>
+            </div>
+        }
+    </section>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.doctor-toggle').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var id = this.getAttribute('data-doctor');
+            var detail = document.getElementById('doctor-detail-' + id);
+            if (detail) {
+                detail.classList.toggle('visible');
+            }
+        });
+    });
+});
+</script>
+

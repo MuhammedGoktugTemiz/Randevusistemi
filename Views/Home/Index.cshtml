@@ -1,0 +1,116 @@
+@{
+    ViewData["Title"] = "Anasayfa";
+    var selectedDate = ViewBag.SelectedDate as DateTime? ?? DateTime.Today;
+    var weekDates = ViewBag.WeekDates as List<DateTime> ?? new List<DateTime>();
+    var doctors = ViewBag.Doctors as List<RandevuWeb.Models.Doctor> ?? new List<RandevuWeb.Models.Doctor>();
+    var appointments = ViewBag.Appointments as List<RandevuWeb.Models.Appointment> ?? new List<RandevuWeb.Models.Appointment>();
+}
+
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <h1>Anasayfa</h1>
+        <div class="selected-date-info">
+            <span>Seçili Gün: <strong>@selectedDate.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("tr-TR"))</strong></span>
+        </div>
+    </div>
+
+    <div class="dashboard-content">
+        <div class="week-calendar-sidebar">
+            <div class="week-navigation">
+                <button onclick="changeWeek(-1)" class="btn-nav">◀</button>
+                <span class="week-label">Hafta</span>
+                <button onclick="changeWeek(1)" class="btn-nav">▶</button>
+            </div>
+            <div class="week-days">
+                @foreach (var date in weekDates)
+                {
+                    var dayAppointments = appointments.Where(a => a.Start.Date == date.Date).ToList();
+                    var isSelected = date.Date == selectedDate.Date;
+                    var isToday = date.Date == DateTime.Today;
+                    <div class="week-day @(isSelected ? "selected" : "") @(isToday ? "today" : "")" 
+                         onclick="selectDate('@date.ToString("yyyy-MM-dd")')">
+                        <div class="day-name">@date.ToString("dddd", new System.Globalization.CultureInfo("tr-TR"))</div>
+                        <div class="day-number">@date.Day</div>
+                        <div class="day-appointment-count">@dayAppointments.Count randevu</div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="doctors-panel">
+            <h2>Doktorlar ve Randevular</h2>
+            <div class="doctors-grid">
+                @foreach (var doctor in doctors)
+                {
+                    var doctorAppointments = appointments
+                        .Where(a => a.DoctorId == doctor.Id && a.Start.Date == selectedDate.Date)
+                        .OrderBy(a => a.Start)
+                        .ToList();
+                    var total = doctorAppointments.Count;
+                    var completed = doctorAppointments.Count(a => a.Status == "Tamamlandı");
+                    var waiting = doctorAppointments.Count(a => a.Status == "Bekliyor");
+
+                    <div class="doctor-card">
+                        <div class="doctor-header">
+                            <h3>@doctor.Name</h3>
+                            <span class="doctor-specialty">@doctor.Specialty</span>
+                        </div>
+                        <div class="doctor-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">Toplam:</span>
+                                <span class="stat-value">@total</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Tamamlandı:</span>
+                                <span class="stat-value success">@completed</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Bekliyor:</span>
+                                <span class="stat-value warning">@waiting</span>
+                            </div>
+                        </div>
+                        <div class="appointments-list">
+                            @if (doctorAppointments.Any())
+                            {
+                                @foreach (var apt in doctorAppointments)
+                                {
+                                    var statusClass = (apt.Status ?? string.Empty).Replace(" ", string.Empty).ToLowerInvariant();
+                                    <div class="appointment-item">
+                                        <span class="appointment-time">@apt.Start.ToString("HH:mm")</span>
+                                        <span class="appointment-patient">@apt.PatientName</span>
+                                        <span class="appointment-status status-@statusClass">@apt.Status</span>
+                                        <form method="post" asp-controller="Appointment" asp-action="UpdateStatus" class="appointment-status-form">
+                                            @Html.AntiForgeryToken()
+                                            <input type="hidden" name="id" value="@apt.Id" />
+                                            <button type="submit" name="status" value="Tamamlandı" class="status-action completed">Tamamlandı</button>
+                                            <button type="submit" name="status" value="İşlem Devam Edecek" class="status-action pending">İşlem Devam Edecek</button>
+                                            <button type="submit" name="status" value="İptal" class="status-action cancelled">Randevu İptal</button>
+                                        </form>
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <div class="empty-state">Bu gün için randevu yok</div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function selectDate(dateStr) {
+    window.location.href = '@Url.Action("Index", "Home")?selectedDate=' + dateStr;
+}
+
+function changeWeek(direction) {
+    var currentDate = new Date('@selectedDate.ToString("yyyy-MM-dd")');
+    currentDate.setDate(currentDate.getDate() + (direction * 7));
+    var dateStr = currentDate.toISOString().split('T')[0];
+    selectDate(dateStr);
+}
+</script>
+

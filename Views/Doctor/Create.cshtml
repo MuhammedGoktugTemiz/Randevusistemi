@@ -1,0 +1,47 @@
+@model RandevuWeb.Models.Doctor
+@{
+    ViewData["Title"] = "Yeni Doktor Ekle";
+}
+
+<div class="form-container">
+    <h1>Yeni Doktor Ekle</h1>
+    
+    <form method="post" class="doctor-form">
+        <div class="form-group">
+            <label asp-for="Name">Ad Soyad *</label>
+            <input asp-for="Name" class="form-control" required placeholder="Dr. Ad Soyad" />
+            <span asp-validation-for="Name" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Specialty">Uzmanlık *</label>
+            <input asp-for="Specialty" class="form-control" required placeholder="Örn: Ortodonti, Protez, Endodonti" />
+            <span asp-validation-for="Specialty" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="Username">Kullanıcı Adı *</label>
+            <input asp-for="Username" class="form-control" required placeholder="ornek.kullanici" />
+            <small class="form-text">Doktor girişi için kullanılacak kullanıcı adı</small>
+            <span asp-validation-for="Username" class="text-danger"></span>
+        </div>
+
+        <div class="form-group">
+            <label for="password">Şifre</label>
+            <input type="password" id="password" name="password" class="form-control" placeholder="Boş bırakılırsa otomatik oluşturulur" />
+            <small class="form-text">Boş bırakılırsa kullanıcı adının ilk 4 harfi + '123' olarak otomatik oluşturulur. Şifreler güvenli bir şekilde hash'lenerek saklanır.</small>
+        </div>
+
+        <div class="form-group">
+            <label asp-for="PhoneNumber">WhatsApp Telefon Numarası</label>
+            <input asp-for="PhoneNumber" class="form-control" type="tel" placeholder="905551234567 (90 ile başlayan format)" />
+            <small class="form-text">WhatsApp hatırlatma mesajları için telefon numarası (örn: 905551234567)</small>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Kaydet</button>
+            <a href="@Url.Action("Index", "Doctor")" class="btn btn-secondary">İptal</a>
+        </div>
+    </form>
+</div>
+
