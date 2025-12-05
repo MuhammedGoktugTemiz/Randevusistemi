@@ -21,22 +21,26 @@ namespace RandevuWeb
             var container = UnityConfig.RegisterComponents();
             DependencyResolver.SetResolver(new UnityDependencyResolver(container));
 
-            // Initialize database
+            // Initialize database - Production'da sadece connection test et
             try
             {
                 using (var context = new Data.ApplicationDbContext())
                 {
-                    // Test connection
-                    if (!context.Database.Exists())
+                    // Sadece connection test et, database otomatik oluşturma
+                    // Database zaten SQL Server'da oluşturulmuş olmalı
+                    var canConnect = context.Database.Exists();
+                    if (!canConnect)
                     {
-                        context.Database.Create();
+                        // Log warning but don't prevent app from starting
+                        System.Diagnostics.Debug.WriteLine("Warning: Database connection failed. Please check connection string in web.config");
                     }
                 }
             }
             catch (Exception ex)
             {
                 // Log error but don't prevent app from starting
-                System.Diagnostics.Debug.WriteLine($"Database initialization error: {ex.Message}");
+                // Production'da uygulama başlamalı, database hatası sonra düzeltilebilir
+                System.Diagnostics.Debug.WriteLine($"Database connection test error: {ex.Message}");
             }
         }
     }

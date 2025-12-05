@@ -82,3 +82,13 @@ Thumbs.db
 .vscode/
 .cursor/
 
+# .NET Framework backup files
+*.backup
+Program.cs.backup
+*.NetFramework.cs
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
